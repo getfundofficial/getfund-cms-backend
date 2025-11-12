@@ -42,8 +42,8 @@ export async function POST(request: NextRequest) {
       secure: process.env.NODE_ENV === 'production',
       sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'strict',
       maxAge: jwtConfig.refreshExpiresIn,
-      path: '/',
-    });
+      path: '/'
+    }as any);
 
     return response;
   } catch (error: any) {

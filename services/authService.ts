@@ -1,5 +1,5 @@
 import bcrypt from 'bcrypt';
-import jwt from 'jsonwebtoken';
+import jwt, { SignOptions } from 'jsonwebtoken';
 import { UserModel } from '@/models/User';
 import { jwtConfig } from '@/lib/jwt';
 import { AuditLogModel } from '@/models/AuditLog';
@@ -39,13 +39,13 @@ export class AuthService {
         permissions: user.permissions || []
       },
       jwtConfig.secret,
-      { expiresIn: jwtConfig.expiresIn }
+      { expiresIn: jwtConfig.expiresIn } as SignOptions
     );
 
     const refreshToken = jwt.sign(
       { userId: user.id },
       jwtConfig.refreshSecret,
-      { expiresIn: jwtConfig.refreshExpiresIn }
+      { expiresIn: jwtConfig.refreshExpiresIn } as SignOptions
     );
 
     // Log login
@@ -91,7 +91,7 @@ export class AuthService {
           permissions: user.permissions || []
         },
         jwtConfig.secret,
-        { expiresIn: jwtConfig.expiresIn }
+        { expiresIn: jwtConfig.expiresIn } as SignOptions
       );
 
       return { accessToken };

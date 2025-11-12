@@ -4,5 +4,6 @@ uploads/*
 !uploads/.gitkeep
 *.log
 .DS_Store
-
+.next/
 .vercel
+tsconfig.tsbuildinfo
