@@ -36,12 +36,15 @@ app.get('/api/health', (req, res) => {
 app.get('/api/news', async (req, res) => {
   try {
     const result = await pool.query(`
-      SELECT id, title, summary as excerpt, content, image_url, 
-             published_date as date, category, created_at
-      FROM news 
-      ORDER BY published_date DESC, created_at DESC
+      SELECT id, title, slug, excerpt, body as content, featured_image_url as image_url,
+             published_at as date, category, author, created_at
+      FROM content
+      WHERE type = 'news'
+        AND status = 'published'
+        AND deleted_at IS NULL
+      ORDER BY published_at DESC, created_at DESC
     `);
-    
+
     res.json(result.rows);
   } catch (error) {
     console.error('Error fetching news:', error);

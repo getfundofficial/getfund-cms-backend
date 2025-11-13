@@ -9,16 +9,19 @@ const sql = neon(process.env.DATABASE_URL!);
 // Use Neon Pool for traditional connection pooling
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
+  connectionTimeoutMillis: 10000,
+  idleTimeoutMillis: 10000,
+  max: 5,
 });
 
 pool.on('error', (err) => {
   console.error('Unexpected database error:', err);
 });
 
-// Helper function for queries using Neon's serverless driver (recommended)
+// Helper function for queries - use serverless driver for better performance
 export async function query(text: string, params?: any[]) {
   try {
-    // Use Neon's serverless driver for better performance on Vercel
+    // Use Neon's serverless driver
     const result = await sql(text, params || []);
     return { rows: result, rowCount: result.length };
   } catch (error) {
