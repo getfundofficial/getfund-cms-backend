@@ -1,5 +1,10 @@
+require('dotenv').config();
 const bcrypt = require('bcrypt');
-const { pool } = require('../config/database');
+const { Pool } = require('@neondatabase/serverless');
+
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+});
 
 async function seedDatabase() {
   console.log('🌱 Seeding database...\n');
@@ -205,9 +210,11 @@ async function seedDatabase() {
     console.log('   Password: getfund2025\n');
     console.log('⚠️  Remember to change all passwords after first login!');
 
+    await pool.end();
     process.exit(0);
   } catch (error) {
     console.error('❌ Seeding failed:', error);
+    await pool.end();
     process.exit(1);
   }
 }

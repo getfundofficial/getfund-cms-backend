@@ -1,6 +1,11 @@
+require('dotenv').config();
 const fs = require('fs');
 const path = require('path');
-const { pool } = require('../config/database');
+const { Pool } = require('@neondatabase/serverless');
+
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+});
 
 async function runMigrations() {
   console.log('🔄 Running database migrations...\n');
@@ -25,9 +30,11 @@ async function runMigrations() {
     }
 
     console.log('🎉 All migrations completed successfully!');
+    await pool.end();
     process.exit(0);
   } catch (error) {
     console.error('❌ Migration failed:', error);
+    await pool.end();
     process.exit(1);
   }
 }

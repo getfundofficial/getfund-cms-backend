@@ -1,4 +1,9 @@
-const {pool} = require('./src/config/database.js');
+require('dotenv').config();
+const { Pool } = require('@neondatabase/serverless');
+
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+});
 
 async function test() {
   try {
@@ -12,9 +17,11 @@ async function test() {
       console.log(`- ${article.title} (${article.status})`);
     });
 
+    await pool.end();
     process.exit(0);
   } catch (error) {
     console.error('❌ Error:', error.message);
+    await pool.end();
     process.exit(1);
   }
 }
