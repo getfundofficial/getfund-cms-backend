@@ -169,12 +169,13 @@ async function seedDatabase() {
     for (const article of newsArticles) {
       const result = await pool.query(
         `INSERT INTO content (type, title, slug, excerpt, body, author, category,
-                             status, created_by, published_by, published_at, created_at, updated_at)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, NOW(), NOW())
+                             featured_image_url, status, created_by, published_by, published_at, created_at, updated_at)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, NOW(), NOW())
          ON CONFLICT (slug) DO UPDATE SET
            title = EXCLUDED.title,
            excerpt = EXCLUDED.excerpt,
-           body = EXCLUDED.body
+           body = EXCLUDED.body,
+           featured_image_url = EXCLUDED.featured_image_url
          RETURNING id, title`,
         [
           article.type,
@@ -184,6 +185,7 @@ async function seedDatabase() {
           article.body,
           article.author,
           article.category,
+          article.featured_image_url,
           article.status,
           article.created_by,
           article.published_by,
