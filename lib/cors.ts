@@ -24,4 +24,4 @@ export function corsOptionsResponse(origin?: string | null) {
     status: 200,
     headers: getCorsHeaders(origin),
   });
-}
+} 
