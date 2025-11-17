@@ -4,12 +4,18 @@ import { neon, neonConfig, Pool } from '@neondatabase/serverless';
 neonConfig.fetchConnectionCache = true;
 
 // Use Neon serverless driver for queries (recommended for Vercel Edge/Serverless)
-const sql = neon(process.env.DATABASE_URL!);
+const sql = neon(process.env.DATABASE_URL!, {
+  fetchOptions: {
+    // Increase timeout to 30 seconds to allow database to wake up from sleep
+    // Neon free tier databases suspend after inactivity
+    signal: AbortSignal.timeout(30000),
+  },
+});
 
 // Use Neon Pool for traditional connection pooling
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
-  connectionTimeoutMillis: 10000,
+  connectionTimeoutMillis: 30000, // Increased to 30 seconds for database wake-up
   idleTimeoutMillis: 10000,
   max: 5,
 });
