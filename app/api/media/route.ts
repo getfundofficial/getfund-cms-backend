@@ -135,7 +135,7 @@ export async function POST(request: NextRequest) {
       filePath,
       fileUrl,
       altText,
-      user.userId
+      user.id
     ]);
 
     return NextResponse.json(

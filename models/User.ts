@@ -16,7 +16,7 @@ export class UserModel {
   // Find user by email (includes password for auth)
   static async findByEmail(email: string): Promise<User | null> {
     const result = await query(
-      'SELECT * FROM users WHERE email = $1 AND is_active = true',
+      'SELECT * FROM users WHERE email = $1',
       [email]
     );
     return (result.rows[0] as User) || null;

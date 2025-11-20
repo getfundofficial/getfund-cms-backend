@@ -4,18 +4,15 @@ import { neon, neonConfig, Pool } from '@neondatabase/serverless';
 neonConfig.fetchConnectionCache = true;
 
 // Use Neon serverless driver for queries (recommended for Vercel Edge/Serverless)
-const sql = neon(process.env.DATABASE_URL!, {
-  fetchOptions: {
-    // Increase timeout to 30 seconds to allow database to wake up from sleep
-    // Neon free tier databases suspend after inactivity
-    signal: AbortSignal.timeout(30000),
-  },
-});
+// Note: We don't set a timeout here because AbortSignal.timeout() creates a signal that
+// expires after a fixed duration from creation, not from when it's used. Instead, we
+// rely on the retry logic in retryQuery() to handle database wake-up delays.
+const sql = neon(process.env.DATABASE_URL!);
 
 // Use Neon Pool for traditional connection pooling
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
-  connectionTimeoutMillis: 30000, // Increased to 30 seconds for database wake-up
+  connectionTimeoutMillis: 180000, // Increased to 180 seconds for database wake-up
   idleTimeoutMillis: 10000,
   max: 5,
 });
@@ -24,12 +21,44 @@ pool.on('error', (err) => {
   console.error('Unexpected database error:', err);
 });
 
+// Helper function with retry logic for Neon database wake-up
+async function retryQuery(text: string, params?: any[], maxRetries = 3) {
+  let lastError: any;
+
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      console.log(`[DB] Query attempt ${attempt}/${maxRetries}`);
+      const result = await sql(text, params || []);
+
+      if (attempt > 1) {
+        console.log(`[DB] Query succeeded after ${attempt} attempts`);
+      }
+
+      return { rows: result, rowCount: result.length };
+    } catch (error: any) {
+      lastError = error;
+      const isTimeoutError = error.message?.includes('timeout') ||
+                            error.message?.includes('aborted') ||
+                            error.code === 'ETIMEDOUT';
+
+      if (isTimeoutError && attempt < maxRetries) {
+        const delay = Math.min(1000 * Math.pow(2, attempt - 1), 10000); // Exponential backoff: 1s, 2s, 4s, 8s, 10s
+        console.log(`[DB] Timeout on attempt ${attempt}, retrying in ${delay}ms... (Database may be waking up)`);
+        await new Promise(resolve => setTimeout(resolve, delay));
+        continue;
+      }
+
+      throw error;
+    }
+  }
+
+  throw lastError;
+}
+
 // Helper function for queries - use serverless driver for better performance
 export async function query(text: string, params?: any[]) {
   try {
-    // Use Neon's serverless driver
-    const result = await sql(text, params || []);
-    return { rows: result, rowCount: result.length };
+    return await retryQuery(text, params);
   } catch (error) {
     console.error('Database query error:', error);
     throw error;

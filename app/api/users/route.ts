@@ -4,6 +4,9 @@ import { query } from '@/lib/db';
 import { getCorsHeaders } from '@/lib/cors';
 import bcrypt from 'bcrypt';
 
+// Configure route to allow longer execution time for database wake-up
+export const maxDuration = 180; // 180 seconds (3 minutes)
+
 // GET /api/users - Get all users (admin only)
 export async function GET(request: NextRequest) {
   try {

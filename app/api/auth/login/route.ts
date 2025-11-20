@@ -3,6 +3,9 @@ import { AuthService } from '@/services/authService';
 import { jwtConfig } from '@/lib/jwt';
 import { corsOptionsResponse, corsResponse } from '@/lib/cors';
 
+// Configure route to allow longer execution time for database wake-up
+export const maxDuration = 180; // 180 seconds (3 minutes)
+
 // Handle CORS preflight
 export async function OPTIONS(request: NextRequest) {
   return corsOptionsResponse(request.headers.get('origin'));

@@ -1,6 +1,14 @@
--- Add permissions column to users table
-ALTER TABLE users
-ADD COLUMN permissions JSONB DEFAULT '["news", "hero_slide"]'::jsonb;
+-- Add permissions column to users table (if not exists)
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_name = 'users' AND column_name = 'permissions'
+  ) THEN
+    ALTER TABLE users
+    ADD COLUMN permissions JSONB DEFAULT '["news", "hero_slide"]'::jsonb;
+  END IF;
+END $$;
 
 -- Update existing users with default permissions
 -- Admins get all permissions

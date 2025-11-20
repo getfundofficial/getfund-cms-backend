@@ -2,6 +2,10 @@ import { NextRequest, NextResponse } from 'next/server';
 import { query } from '@/lib/db';
 import { corsResponse, corsOptionsResponse } from '@/lib/cors';
 import { verifyAuth } from '@/lib/auth-middleware';
+import { AuditLogModel } from '@/models/AuditLog';
+
+// Configure route to allow longer execution time for database wake-up
+export const maxDuration = 180; // 180 seconds (3 minutes)
 
 // Handle CORS preflight
 export async function OPTIONS(request: NextRequest) {
@@ -129,7 +133,25 @@ export async function POST(request: NextRequest) {
       ]
     );
 
-    const response = NextResponse.json(result.rows[0], { status: 201 });
+    const createdContent = result.rows[0];
+
+    // Log content creation
+    await AuditLogModel.create({
+      user_id: authResult.user.id,
+      action: 'create',
+      entity_type: 'content',
+      entity_id: createdContent.id,
+      changes: {
+        type,
+        title,
+        slug,
+        status: 'draft',
+      },
+      ip_address: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || undefined,
+      user_agent: request.headers.get('user-agent') || undefined,
+    });
+
+    const response = NextResponse.json(createdContent, { status: 201 });
     corsResponse(response, request.headers.get('origin'));
     return response;
   } catch (error: any) {

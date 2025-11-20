@@ -82,7 +82,7 @@ export async function PUT(
     }
 
     // Prevent admin from deactivating themselves
-    if (is_active === false && user.userId === params.id) {
+    if (is_active === false && user.id === params.id) {
       return NextResponse.json(
         { error: 'Cannot deactivate your own account' },
         { status: 400, headers: getCorsHeaders(request.headers.get('origin')) }
@@ -174,10 +174,10 @@ export async function DELETE(
       );
     }
 
-    // Prevent admin from deactivating themselves
-    if (user.userId === params.id) {
+    // Prevent admin from deleting themselves
+    if (user.id === params.id) {
       return NextResponse.json(
-        { error: 'Cannot deactivate your own account' },
+        { error: 'Cannot delete your own account' },
         { status: 400, headers: getCorsHeaders(request.headers.get('origin')) }
       );
     }

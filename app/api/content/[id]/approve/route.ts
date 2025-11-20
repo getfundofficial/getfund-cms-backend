@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { query } from '@/lib/db';
 import { corsResponse, corsOptionsResponse } from '@/lib/cors';
 import { verifyAuth } from '@/lib/auth-middleware';
+import { AuditLogModel } from '@/models/AuditLog';
 
 // Handle CORS preflight
 export async function OPTIONS(request: NextRequest) {
@@ -56,7 +57,24 @@ export async function POST(
       return errorResponse;
     }
 
-    const response = NextResponse.json(result.rows[0]);
+    const approvedContent = result.rows[0];
+
+    // Log content approval
+    await AuditLogModel.create({
+      user_id: authResult.user.id,
+      action: 'approve',
+      entity_type: 'content',
+      entity_id: params.id,
+      changes: {
+        title: approvedContent.title,
+        type: approvedContent.type,
+        status: 'approved',
+      },
+      ip_address: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || undefined,
+      user_agent: request.headers.get('user-agent') || undefined,
+    });
+
+    const response = NextResponse.json(approvedContent);
     corsResponse(response, request.headers.get('origin'));
     return response;
   } catch (error: any) {

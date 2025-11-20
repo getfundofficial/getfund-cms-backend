@@ -2,6 +2,10 @@ import { NextRequest, NextResponse } from 'next/server';
 import { query } from '@/lib/db';
 import { corsResponse, corsOptionsResponse } from '@/lib/cors';
 import { verifyAuth } from '@/lib/auth-middleware';
+import { AuditLogModel } from '@/models/AuditLog';
+
+// Configure route to allow longer execution time for database wake-up
+export const maxDuration = 180; // 180 seconds (3 minutes)
 
 // Handle CORS preflight
 export async function OPTIONS(request: NextRequest) {
@@ -112,7 +116,24 @@ export async function PUT(
       return errorResponse;
     }
 
-    const response = NextResponse.json(result.rows[0]);
+    const updatedContent = result.rows[0];
+
+    // Log content update
+    await AuditLogModel.create({
+      user_id: authResult.user.id,
+      action: 'update',
+      entity_type: 'content',
+      entity_id: params.id,
+      changes: {
+        title: updatedContent.title,
+        type: updatedContent.type,
+        status: updatedContent.status,
+      },
+      ip_address: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || undefined,
+      user_agent: request.headers.get('user-agent') || undefined,
+    });
+
+    const response = NextResponse.json(updatedContent);
     corsResponse(response, request.headers.get('origin'));
     return response;
   } catch (error: any) {
@@ -142,6 +163,24 @@ export async function DELETE(
       return errorResponse;
     }
 
+    // Get content details before deletion for audit log
+    const contentResult = await query(
+      `SELECT id, title, type FROM content WHERE id = $1 AND deleted_at IS NULL`,
+      [params.id]
+    );
+
+    if (contentResult.rows.length === 0) {
+      const errorResponse = NextResponse.json(
+        { error: 'Content not found' },
+        { status: 404 }
+      );
+      corsResponse(errorResponse, request.headers.get('origin'));
+      return errorResponse;
+    }
+
+    const contentToDelete = contentResult.rows[0];
+
+    // Perform soft delete
     const result = await query(
       `UPDATE content
        SET deleted_at = NOW()
@@ -158,6 +197,20 @@ export async function DELETE(
       corsResponse(errorResponse, request.headers.get('origin'));
       return errorResponse;
     }
+
+    // Log content deletion
+    await AuditLogModel.create({
+      user_id: authResult.user.id,
+      action: 'delete',
+      entity_type: 'content',
+      entity_id: params.id,
+      changes: {
+        title: contentToDelete.title,
+        type: contentToDelete.type,
+      },
+      ip_address: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || undefined,
+      user_agent: request.headers.get('user-agent') || undefined,
+    });
 
     const response = NextResponse.json({ success: true });
     corsResponse(response, request.headers.get('origin'));
