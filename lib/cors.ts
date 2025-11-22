@@ -1,9 +1,33 @@
 // lib/cors.ts
 import { NextResponse } from 'next/server';
 
+// Allowed origins for CORS
+const ALLOWED_ORIGINS = [
+  'http://localhost:3000',
+  'http://localhost:5173',
+  'http://localhost:5174',
+  'http://localhost:5175',
+  'http://localhost:5176',
+  // Add your production domains here
+  'https://getfund.gov.gh',
+  'https://www.getfund.gov.gh',
+  // Add your Vercel preview/production URLs when you know them
+];
+
+function isOriginAllowed(origin?: string | null): boolean {
+  if (!origin) return false;
+
+  // Allow Vercel preview deployments
+  if (origin.includes('.vercel.app')) return true;
+
+  return ALLOWED_ORIGINS.includes(origin);
+}
+
 export function getCorsHeaders(origin?: string | null) {
+  const allowedOrigin = isOriginAllowed(origin) ? origin : ALLOWED_ORIGINS[0];
+
   return {
-    'Access-Control-Allow-Origin': origin || '*',
+    'Access-Control-Allow-Origin': allowedOrigin || '*',
     'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, PATCH, OPTIONS',
     'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Requested-With, Cache-Control, Pragma, Expires',
     'Access-Control-Expose-Headers': 'Cache-Control, Pragma, Expires',
