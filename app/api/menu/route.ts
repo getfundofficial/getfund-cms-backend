@@ -10,9 +10,9 @@ export async function OPTIONS(request: NextRequest) {
 // GET /api/menu - Get menu configuration for public website
 export async function GET(request: NextRequest) {
   try {
-    // Fetch menu items (published pages with show_in_menu = true)
+    // Fetch all menu items (including CTA buttons) - published pages with show_in_menu = true
     const menuItemsResult = await query(`
-      SELECT 
+      SELECT
         id,
         slug,
         title,
@@ -21,26 +21,11 @@ export async function GET(request: NextRequest) {
         show_in_menu,
         is_cta_button,
         parent_page_id
-      FROM pages 
-      WHERE is_active = true 
-        AND show_in_menu = true 
-        AND is_cta_button = false
+      FROM pages
+      WHERE is_active = true
+        AND show_in_menu = true
       ORDER BY menu_order ASC
-      LIMIT 6
-    `);
-
-    // Fetch CTA button (published page with is_cta_button = true)
-    const ctaButtonResult = await query(`
-      SELECT 
-        id,
-        slug,
-        title,
-        menu_label,
-        is_cta_button
-      FROM pages 
-      WHERE is_active = true 
-        AND is_cta_button = true
-      LIMIT 1
+      LIMIT 10
     `);
 
     const menuItems = menuItemsResult.rows.map(item => ({
@@ -52,16 +37,9 @@ export async function GET(request: NextRequest) {
       parentId: item.parent_page_id,
     }));
 
-    const ctaButton = ctaButtonResult.rows.length > 0 ? {
-      id: ctaButtonResult.rows[0].id,
-      slug: ctaButtonResult.rows[0].slug,
-      title: ctaButtonResult.rows[0].title,
-      label: ctaButtonResult.rows[0].menu_label || ctaButtonResult.rows[0].title,
-    } : null;
-
     const response = NextResponse.json({
       menuItems,
-      ctaButton,
+      ctaButton: null, // Deprecated: CTA button is now part of menuItems
     });
     
     return corsResponse(response, request.headers.get('origin'));
