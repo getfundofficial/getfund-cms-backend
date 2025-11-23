@@ -11,6 +11,9 @@ const ALLOWED_ORIGINS = [
   // Production domains
   'https://getfund.gov.gh',
   'https://www.getfund.gov.gh',
+  // Vercel production URLs
+  'https://getfund-website.vercel.app',
+  'https://getfund-website-li8xch4m4-thehansguy-projects.vercel.app',
 ];
 
 function isOriginAllowed(origin?: string | null): boolean {
