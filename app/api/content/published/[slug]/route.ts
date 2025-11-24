@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { query } from '@/lib/db';
 import { corsResponse, corsOptionsResponse } from '@/lib/cors';
+import { toRelativePath, sanitizeUrls } from '@/lib/url-utils';
 
 // Handle CORS preflight
 export async function OPTIONS(request: NextRequest) {
@@ -50,7 +51,14 @@ export async function GET(
     const content = result.rows[0];
     console.log(`[API] Found content: ${content.title} (type: ${content.type})`);
 
-    const response = NextResponse.json(content);
+    // Sanitize URLs to remove localhost references
+    const sanitizedContent = {
+      ...content,
+      featured_image_url: toRelativePath(content.featured_image_url),
+      meta_data: sanitizeUrls(content.meta_data),
+    };
+
+    const response = NextResponse.json(sanitizedContent);
     corsResponse(response, request.headers.get('origin'));
     return response;
   } catch (error: any) {

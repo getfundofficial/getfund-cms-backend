@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { query } from '@/lib/db';
 import { corsResponse, corsOptionsResponse } from '@/lib/cors';
+import { toRelativePath } from '@/lib/url-utils';
 
 // Handle CORS preflight
 export async function OPTIONS(request: NextRequest) {
@@ -36,7 +37,7 @@ export async function GET(request: NextRequest) {
       slug: row.slug,
       excerpt: row.excerpt || '',
       content: row.body || '',
-      image_url: row.featured_image_url || null,
+      image_url: toRelativePath(row.featured_image_url),
       author: row.author || 'GETFund',
       category: row.category || 'News',
       date: row.published_at || row.created_at,

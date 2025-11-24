@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { query } from '@/lib/db';
 import { corsResponse, corsOptionsResponse } from '@/lib/cors';
 import { verifyAuth } from '@/lib/auth-middleware';
+import { sanitizeUrls } from '@/lib/url-utils';
 
 // Handle CORS preflight
 export async function OPTIONS(request: NextRequest) {
@@ -74,7 +75,7 @@ export async function GET(
           meta_description: pageData.excerpt,
           is_active: true,
           layout_template: 'standard',
-          content: parsedContent,
+          content: sanitizeUrls(parsedContent),
           sections: [],
           published_at: pageData.published_at,
           updated_at: pageData.updated_at,
@@ -125,10 +126,16 @@ export async function GET(
       ORDER BY ps.order_index ASC, ps.created_at ASC
     `, [page.id, authResult.authenticated]);
 
+    // Sanitize URLs in sections content to remove localhost references
+    const sanitizedSections = sectionsResult.rows.map(section => ({
+      ...section,
+      content: sanitizeUrls(section.content),
+    }));
+
     const response = NextResponse.json({
       page: {
         ...page,
-        sections: sectionsResult.rows,
+        sections: sanitizedSections,
       },
     });
     return corsResponse(response, request.headers.get('origin'));
