@@ -10,7 +10,9 @@ export async function OPTIONS(request: NextRequest) {
 // GET /api/menu - Get menu configuration for public website
 export async function GET(request: NextRequest) {
   try {
-    // Fetch all menu items (including CTA buttons) - published pages with show_in_menu = true
+    // Fetch all menu items including:
+    // 1. Pages with show_in_menu = true (parent menu items)
+    // 2. Pages with parent_page_id (child pages for dropdowns)
     const menuItemsResult = await query(`
       SELECT
         id,
@@ -23,12 +25,12 @@ export async function GET(request: NextRequest) {
         parent_page_id
       FROM pages
       WHERE is_active = true
-        AND show_in_menu = true
+        AND (show_in_menu = true OR parent_page_id IS NOT NULL)
       ORDER BY menu_order ASC
-      LIMIT 10
+      LIMIT 50
     `);
 
-    const menuItems = menuItemsResult.rows.map(item => ({
+    const allItems = menuItemsResult.rows.map(item => ({
       id: item.id,
       slug: item.slug,
       title: item.title,
@@ -37,11 +39,27 @@ export async function GET(request: NextRequest) {
       parentId: item.parent_page_id,
     }));
 
+    // Build hierarchical structure: separate parent items and children
+    const parentItems = allItems.filter(item => !item.parentId);
+    const childItems = allItems.filter(item => item.parentId);
+
+    // Attach children to their parent items
+    const menuItems = parentItems.map(parent => {
+      const children = childItems
+        .filter(child => child.parentId === parent.id)
+        .sort((a, b) => (a.order || 0) - (b.order || 0));
+
+      return {
+        ...parent,
+        children: children.length > 0 ? children : undefined,
+      };
+    });
+
     const response = NextResponse.json({
       menuItems,
       ctaButton: null, // Deprecated: CTA button is now part of menuItems
     });
-    
+
     return corsResponse(response, request.headers.get('origin'));
   } catch (error: any) {
     console.error('Error fetching menu configuration:', error);
