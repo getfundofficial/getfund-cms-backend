@@ -109,14 +109,15 @@ export async function POST(request: NextRequest) {
       category,
       featured_image_url,
       meta_data,
+      published_at,
     } = body;
 
     const result = await query(
       `INSERT INTO content (
         type, title, slug, excerpt, body, author, category,
-        featured_image_url, meta_data, status, created_by, created_at, updated_at
+        featured_image_url, meta_data, status, created_by, published_at, created_at, updated_at
       )
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, NOW(), NOW())
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, NOW(), NOW())
       RETURNING *`,
       [
         type,
@@ -130,6 +131,7 @@ export async function POST(request: NextRequest) {
         meta_data ? JSON.stringify(meta_data) : null,
         'draft',
         authResult.user.id,
+        published_at || null,
       ]
     );
 

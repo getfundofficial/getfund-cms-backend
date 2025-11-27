@@ -85,14 +85,15 @@ export async function PUT(
       category,
       featured_image_url,
       meta_data,
+      published_at,
     } = body;
 
     const result = await query(
       `UPDATE content
        SET title = $1, slug = $2, excerpt = $3, body = $4,
            author = $5, category = $6, featured_image_url = $7,
-           meta_data = $8, updated_at = NOW()
-       WHERE id = $9 AND deleted_at IS NULL
+           meta_data = $8, published_at = $9, updated_at = NOW()
+       WHERE id = $10 AND deleted_at IS NULL
        RETURNING *`,
       [
         title,
@@ -103,6 +104,7 @@ export async function PUT(
         category,
         featured_image_url,
         meta_data ? JSON.stringify(meta_data) : null,
+        published_at || null,
         params.id,
       ]
     );
