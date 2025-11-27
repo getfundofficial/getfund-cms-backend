@@ -3,16 +3,33 @@
  */
 
 /**
- * Convert absolute localhost URLs to relative paths
- * This fixes mixed content issues where images were stored with localhost URLs
+ * Convert absolute localhost URLs to production URLs or relative paths
+ * In production, converts localhost URLs to the backend's production URL
+ * In development, converts to relative paths for proxy
  * @param url - The URL to convert (can be absolute or relative)
- * @returns Relative path without localhost domain
+ * @returns Production URL or relative path
  */
 export function toRelativePath(url: string | null | undefined): string | null {
   if (!url) return null;
 
-  // Remove localhost URLs (both http and https, any port)
-  return url.replace(/^https?:\/\/localhost(:\d+)?/, '');
+  // If URL is already a relative path or production URL, return as-is
+  if (!url.startsWith('http://localhost') && !url.startsWith('https://localhost')) {
+    return url;
+  }
+
+  // Get the backend base URL from environment
+  const backendUrl = process.env.NEXT_PUBLIC_API_URL || process.env.VERCEL_URL;
+
+  // Extract the path from the localhost URL
+  const path = url.replace(/^https?:\/\/localhost(:\d+)?/, '');
+
+  // In production, return full URL with backend domain
+  if (backendUrl) {
+    return `${backendUrl.startsWith('http') ? backendUrl : `https://${backendUrl}`}${path}`;
+  }
+
+  // In development, return relative path for proxy
+  return path;
 }
 
 /**
