@@ -1,10 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { writeFile, mkdir } from 'fs/promises';
-import { existsSync } from 'fs';
-import path from 'path';
 import { verifyAuth } from '@/lib/auth-middleware';
 import { query } from '@/lib/db';
 import { getCorsHeaders } from '@/lib/cors';
+import { uploadFile } from '@/lib/blob-storage';
 
 // GET /api/media - Get all media files
 export async function GET(request: NextRequest) {
@@ -88,31 +86,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Generate unique filename
-    const timestamp = Date.now();
-    const randomString = Math.random().toString(36).substring(2, 8);
-    const extension = path.extname(file.name);
-    const filename = `${timestamp}-${randomString}${extension}`;
+    // Upload file to Blob storage (or local filesystem in development)
+    const uploadResult = await uploadFile(file, file.name, {
+      contentType: file.type,
+      folder: 'uploads',
+    });
 
-    // Create year/month directory structure
-    const now = new Date();
-    const year = now.getFullYear();
-    const month = String(now.getMonth() + 1).padStart(2, '0');
-    const uploadDir = path.join(process.cwd(), 'public', 'uploads', String(year), month);
-
-    // Create directory if it doesn't exist
-    if (!existsSync(uploadDir)) {
-      await mkdir(uploadDir, { recursive: true });
-    }
-
-    // Save file
-    const filePath = path.join(uploadDir, filename);
-    const bytes = await file.arrayBuffer();
-    const buffer = Buffer.from(bytes);
-    await writeFile(filePath, buffer);
-
-    // Generate URL
-    const fileUrl = `/uploads/${year}/${month}/${filename}`;
+    const fileUrl = uploadResult.url;
+    const filename = uploadResult.pathname.split('/').pop() || file.name;
 
     // Save to database
     const result = await query(`
@@ -130,9 +111,9 @@ export async function POST(request: NextRequest) {
     `, [
       filename,
       file.name,
-      file.type,
-      file.size,
-      filePath,
+      uploadResult.contentType,
+      uploadResult.size,
+      uploadResult.pathname,
       fileUrl,
       altText,
       user.id
