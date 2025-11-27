@@ -17,15 +17,22 @@ export function toRelativePath(url: string | null | undefined): string | null {
     return url;
   }
 
-  // Get the backend base URL from environment
-  const backendUrl = process.env.NEXT_PUBLIC_API_URL || process.env.VERCEL_URL;
-
   // Extract the path from the localhost URL
   const path = url.replace(/^https?:\/\/localhost(:\d+)?/, '');
 
+  // Try to get backend URL from environment variables
+  let backendUrl = process.env.NEXT_PUBLIC_API_URL || process.env.NEXT_PUBLIC_BACKEND_URL;
+
+  // If not set, try VERCEL_URL (automatically set by Vercel)
+  if (!backendUrl && process.env.VERCEL_URL) {
+    backendUrl = `https://${process.env.VERCEL_URL}`;
+  }
+
   // In production, return full URL with backend domain
   if (backendUrl) {
-    return `${backendUrl.startsWith('http') ? backendUrl : `https://${backendUrl}`}${path}`;
+    // Ensure backendUrl has protocol
+    const fullBackendUrl = backendUrl.startsWith('http') ? backendUrl : `https://${backendUrl}`;
+    return `${fullBackendUrl}${path}`;
   }
 
   // In development, return relative path for proxy
