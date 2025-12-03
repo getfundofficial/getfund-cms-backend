@@ -74,32 +74,6 @@
 
 ---
 
-## Our Technical Setup
-
-**Frontend**: React + TypeScript  
-**Backend**: Next.js API (Node.js)  
-**Hosting**: Vercel
-
-**Expected Use Case**: Processing donations ranging from GHS 50 to GHS 50,000
-
----
-
-## Next Steps
-
-Once we receive:
-1. ✅ API credentials (sandbox & production)
-2. ✅ Documentation links
-3. ✅ Test payment methods
-4. ✅ Webhook configuration details
-
-We can:
-1. Complete the integration
-2. Test in sandbox environment
-3. Submit for production approval
-4. Go live
-
----
-
 ## For Xcel Team to Complete
 
 ### API Credentials
@@ -137,26 +111,6 @@ We can:
 - Test MTN Number: `_________________________________`
 - Test Vodafone Number: `_________________________________`
 - Test AirtelTigo Number: `_________________________________`
-
-### Business Details
-
-- Transaction Fee: `________%` or `GHS ________` per transaction
-- Minimum Amount: `GHS _________`
-- Maximum Amount: `GHS _________`
-- Settlement Schedule: `_________________________________`
-- Supported Currencies: `_________________________________`
-
-### Support Contact
-
-- Technical Support Email: `_________________________________`
-- Support Phone: `_________________________________`
-- Account Manager: `_________________________________`
-- Developer Portal: `_________________________________`
-
-### Timeline
-
-- Expected Setup Time: `________` business days
-- Go-Live Approval Time: `________` business days
 
 ---
 
