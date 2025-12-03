@@ -4,6 +4,13 @@ const XCEL_API_URL = 'https://api.xcelapp.com';
 const XCEL_PUBLIC_KEY = process.env.XCEL_PUBLIC_KEY || '';
 const XCEL_WEBHOOK_SECRET = process.env.XCEL_WEBHOOK_SECRET || '';
 
+// CORS headers
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+  'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+};
+
 interface PaymentRequest {
   amount: number;
   currency: string;
@@ -18,6 +25,11 @@ interface PaymentRequest {
   };
 }
 
+// Handle OPTIONS request for CORS
+export async function OPTIONS() {
+  return NextResponse.json({}, { headers: corsHeaders });
+}
+
 export async function POST(request: NextRequest) {
   try {
     const body: PaymentRequest = await request.json();
@@ -26,7 +38,7 @@ export async function POST(request: NextRequest) {
     if (!body.amount || !body.currency || !body.paymentMethod || !body.customerEmail) {
       return NextResponse.json(
         { success: false, error: 'Missing required fields' },
-        { status: 400 }
+        { status: 400, headers: corsHeaders }
       );
     }
 
@@ -34,7 +46,7 @@ export async function POST(request: NextRequest) {
     if (!XCEL_PUBLIC_KEY || !XCEL_WEBHOOK_SECRET) {
       return NextResponse.json(
         { success: false, error: 'Payment gateway not configured' },
-        { status: 500 }
+        { status: 500, headers: corsHeaders }
       );
     }
 
@@ -69,7 +81,7 @@ export async function POST(request: NextRequest) {
     if (!response.ok) {
       return NextResponse.json(
         { success: false, error: data.message || 'Payment initialization failed' },
-        { status: response.status }
+        { status: response.status, headers: corsHeaders }
       );
     }
 
@@ -80,12 +92,12 @@ export async function POST(request: NextRequest) {
         reference: data.reference,
         accessCode: data.access_code,
       },
-    });
+    }, { headers: corsHeaders });
   } catch (error) {
     console.error('Payment initialization error:', error);
     return NextResponse.json(
       { success: false, error: 'Internal server error' },
-      { status: 500 }
+      { status: 500, headers: corsHeaders }
     );
   }
 }
@@ -99,7 +111,7 @@ export async function GET(request: NextRequest) {
     if (!reference) {
       return NextResponse.json(
         { success: false, error: 'Payment reference is required' },
-        { status: 400 }
+        { status: 400, headers: corsHeaders }
       );
     }
 
@@ -116,7 +128,7 @@ export async function GET(request: NextRequest) {
     if (!response.ok) {
       return NextResponse.json(
         { success: false, error: data.message || 'Payment verification failed' },
-        { status: response.status }
+        { status: response.status, headers: corsHeaders }
       );
     }
 
@@ -129,12 +141,12 @@ export async function GET(request: NextRequest) {
         reference: data.reference,
         paidAt: data.paid_at,
       },
-    });
+    }, { headers: corsHeaders });
   } catch (error) {
     console.error('Payment verification error:', error);
     return NextResponse.json(
       { success: false, error: 'Internal server error' },
-      { status: 500 }
+      { status: 500, headers: corsHeaders }
     );
   }
 }
