@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 const XCEL_API_URL = 'https://api.xcelapp.com';
-const XCEL_API_KEY = process.env.XCEL_API_KEY || '';
-const XCEL_SECRET_KEY = process.env.XCEL_SECRET_KEY || '';
+const XCEL_PUBLIC_KEY = process.env.XCEL_PUBLIC_KEY || '';
+const XCEL_WEBHOOK_SECRET = process.env.XCEL_WEBHOOK_SECRET || '';
 
 interface PaymentRequest {
   amount: number;
@@ -31,7 +31,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Validate API keys
-    if (!XCEL_API_KEY || !XCEL_SECRET_KEY) {
+    if (!XCEL_PUBLIC_KEY || !XCEL_WEBHOOK_SECRET) {
       return NextResponse.json(
         { success: false, error: 'Payment gateway not configured' },
         { status: 500 }
@@ -58,8 +58,8 @@ export async function POST(request: NextRequest) {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${XCEL_API_KEY}`,
-        'X-Secret-Key': XCEL_SECRET_KEY,
+        'Authorization': `Bearer ${XCEL_PUBLIC_KEY}`,
+        'X-Webhook-Secret': XCEL_WEBHOOK_SECRET,
       },
       body: JSON.stringify(paymentPayload),
     });
@@ -106,8 +106,8 @@ export async function GET(request: NextRequest) {
     const response = await fetch(`${XCEL_API_URL}/v1/payments/verify/${reference}`, {
       method: 'GET',
       headers: {
-        'Authorization': `Bearer ${XCEL_API_KEY}`,
-        'X-Secret-Key': XCEL_SECRET_KEY,
+        'Authorization': `Bearer ${XCEL_PUBLIC_KEY}`,
+        'X-Webhook-Secret': XCEL_WEBHOOK_SECRET,
       },
     });
 
