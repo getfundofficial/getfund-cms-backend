@@ -109,10 +109,21 @@ export async function POST(request: NextRequest) {
     });
 
     if (!response.ok) {
-      console.error('Xcel payment initialization failed:', data);
+      console.error('Xcel payment initialization failed:', {
+        status: response.status,
+        statusText: response.statusText,
+        data: data,
+      });
+      
+      // Return detailed error from Xcel
       return NextResponse.json(
-        { success: false, error: data.message || 'Payment initialization failed', details: data },
-        { status: response.status, headers: corsHeaders }
+        { 
+          success: false, 
+          error: data.message || data.error || 'Payment initialization failed',
+          xcelError: data,
+          suggestion: 'Please check your Xcel API credentials and account status'
+        },
+        { status: 200, headers: corsHeaders } // Return 200 so frontend can read the error
       );
     }
 
