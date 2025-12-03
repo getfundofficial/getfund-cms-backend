@@ -92,12 +92,6 @@
 - Sandbox Base URL: `_________________________________`
 - Payment Checkout URL: `_________________________________`
 
-### Documentation Links
-
-- API Documentation: `_________________________________`
-- Integration Guide: `_________________________________`
-- Code Examples (Node.js): `_________________________________`
-
 ### Webhook Details
 
 - Event Types: `_________________________________`
