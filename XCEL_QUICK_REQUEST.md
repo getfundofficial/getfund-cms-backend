@@ -100,9 +100,70 @@ We can:
 
 ---
 
-**Contact Information**  
-Name: [Your Name]  
-Email: [Your Email]  
-Phone: [Your Phone]
+## For Xcel Team to Complete
 
-Thank you for supporting GetFund's mission! 🇬🇭
+### API Credentials
+
+**Production:**
+- API Key: `_________________________________`
+- Secret Key: `_________________________________`
+
+**Sandbox/Test:**
+- Test API Key: `_________________________________`
+- Test Secret Key: `_________________________________`
+
+### API URLs
+
+- Production Base URL: `_________________________________`
+- Sandbox Base URL: `_________________________________`
+- Payment Checkout URL: `_________________________________`
+
+### Documentation Links
+
+- API Documentation: `_________________________________`
+- Integration Guide: `_________________________________`
+- Code Examples (Node.js): `_________________________________`
+
+### Webhook Details
+
+- Event Types: `_________________________________`
+- Signature Verification Method: `_________________________________`
+- Webhook Retry Policy: `_________________________________`
+
+### Testing
+
+- Test Card (Success): `_________________________________`
+- Test Card (Failed): `_________________________________`
+- Test MTN Number: `_________________________________`
+- Test Vodafone Number: `_________________________________`
+- Test AirtelTigo Number: `_________________________________`
+
+### Business Details
+
+- Transaction Fee: `________%` or `GHS ________` per transaction
+- Minimum Amount: `GHS _________`
+- Maximum Amount: `GHS _________`
+- Settlement Schedule: `_________________________________`
+- Supported Currencies: `_________________________________`
+
+### Support Contact
+
+- Technical Support Email: `_________________________________`
+- Support Phone: `_________________________________`
+- Account Manager: `_________________________________`
+- Developer Portal: `_________________________________`
+
+### Timeline
+
+- Expected Setup Time: `________` business days
+- Go-Live Approval Time: `________` business days
+
+---
+
+**Our Contact Information**  
+Organization: GETFund  
+Website: https://getfund-website.vercel.app  
+Email: N/A  
+Phone: N/A
+
+Thank you for supporting GETFund's mission to improve education in Ghana! 🇬🇭
