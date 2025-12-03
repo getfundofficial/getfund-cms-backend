@@ -33,6 +33,13 @@ export async function OPTIONS() {
 export async function POST(request: NextRequest) {
   try {
     const body: PaymentRequest = await request.json();
+    
+    console.log('Payment request received:', {
+      amount: body.amount,
+      currency: body.currency,
+      method: body.paymentMethod,
+      email: body.customerEmail,
+    });
 
     // Validate required fields
     if (!body.amount || !body.currency || !body.paymentMethod || !body.customerEmail) {
@@ -44,8 +51,19 @@ export async function POST(request: NextRequest) {
 
     // Validate API keys
     if (!XCEL_PUBLIC_KEY || !XCEL_WEBHOOK_SECRET) {
+      console.error('Payment gateway configuration missing:', {
+        hasPublicKey: !!XCEL_PUBLIC_KEY,
+        hasWebhookSecret: !!XCEL_WEBHOOK_SECRET,
+      });
       return NextResponse.json(
-        { success: false, error: 'Payment gateway not configured' },
+        { 
+          success: false, 
+          error: 'Payment gateway not configured. Please contact support.',
+          debug: process.env.NODE_ENV === 'development' ? {
+            hasPublicKey: !!XCEL_PUBLIC_KEY,
+            hasWebhookSecret: !!XCEL_WEBHOOK_SECRET,
+          } : undefined
+        },
         { status: 500, headers: corsHeaders }
       );
     }
@@ -66,6 +84,12 @@ export async function POST(request: NextRequest) {
       return_url: `${process.env.NEXT_PUBLIC_WEBSITE_URL || 'https://getfund-website.vercel.app'}/payment/success`,
     };
 
+    console.log('Initializing payment with Xcel:', {
+      url: `${XCEL_API_URL}/v1/payments/initialize`,
+      amount: body.amount,
+      currency: body.currency,
+    });
+
     const response = await fetch(`${XCEL_API_URL}/v1/payments/initialize`, {
       method: 'POST',
       headers: {
@@ -77,10 +101,17 @@ export async function POST(request: NextRequest) {
     });
 
     const data = await response.json();
+    
+    console.log('Xcel API response:', {
+      status: response.status,
+      ok: response.ok,
+      data: data,
+    });
 
     if (!response.ok) {
+      console.error('Xcel payment initialization failed:', data);
       return NextResponse.json(
-        { success: false, error: data.message || 'Payment initialization failed' },
+        { success: false, error: data.message || 'Payment initialization failed', details: data },
         { status: response.status, headers: corsHeaders }
       );
     }
