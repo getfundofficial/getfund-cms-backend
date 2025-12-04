@@ -1,6 +1,14 @@
+const { Pool } = require('pg');
 const fs = require('fs');
 const path = require('path');
-const pool = require('../lib/db');
+require('dotenv').config();
+
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  ssl: process.env.DATABASE_URL.includes('localhost') ? false : {
+    rejectUnauthorized: false
+  }
+});
 
 async function runMigration() {
   try {
@@ -15,9 +23,11 @@ async function runMigration() {
     console.log('✅ Default stats inserted');
     console.log('✅ Default subtitles configured');
     
+    await pool.end();
     process.exit(0);
   } catch (error) {
     console.error('❌ Migration failed:', error);
+    await pool.end();
     process.exit(1);
   }
 }
