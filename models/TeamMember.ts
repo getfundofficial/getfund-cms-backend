@@ -47,28 +47,31 @@ class TeamMemberModel {
    */
   async getAll(role?: string): Promise<TeamMember[]> {
     if (role) {
-      return await sql`
+      const result = await sql`
         SELECT * FROM team_members
         WHERE role = ${role} AND deleted_at IS NULL
         ORDER BY display_order ASC, created_at DESC
       `;
+      return result as TeamMember[];
     }
-    return await sql`
+    const result = await sql`
       SELECT * FROM team_members
       WHERE deleted_at IS NULL
       ORDER BY display_order ASC, created_at DESC
     `;
+    return result as TeamMember[];
   }
 
   /**
    * Get active team members by role
    */
   async getActiveByRole(role: TeamMember['role']): Promise<TeamMember[]> {
-    return await sql`
+    const result = await sql`
       SELECT * FROM team_members
       WHERE role = ${role} AND status = 'active' AND deleted_at IS NULL
       ORDER BY display_order ASC
     `;
+    return result as TeamMember[];
   }
 
   /**
@@ -81,7 +84,7 @@ class TeamMemberModel {
       ORDER BY created_at DESC
       LIMIT 1
     `;
-    return result[0] || null;
+    return (result[0] as TeamMember) || null;
   }
 
   /**
@@ -106,7 +109,7 @@ class TeamMemberModel {
       SELECT * FROM team_members
       WHERE id = ${id} AND deleted_at IS NULL
     `;
-    return result[0] || null;
+    return (result[0] as TeamMember) || null;
   }
 
   /**
@@ -130,7 +133,7 @@ class TeamMemberModel {
       )
       RETURNING *
     `;
-    return result[0];
+    return result[0] as TeamMember;
   }
 
   /**
@@ -186,7 +189,7 @@ class TeamMemberModel {
     `;
 
     const result = await sql(query, values);
-    return result[0];
+    return result[0] as TeamMember;
   }
 
   /**
