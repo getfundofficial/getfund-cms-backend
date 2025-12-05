@@ -233,3 +233,4 @@ Shows success/failure message
 
 **Last Updated:** December 5, 2025
 **Status:** Test Mode Active - Awaiting Xcel API Credentials
+**Version:** 1.0.1
