@@ -73,14 +73,31 @@ Before going live:
 4. Verify webhooks are received correctly
 5. Test error scenarios (failed payments, cancellations)
 
-### 4. Go Live
+### 4. Configure Xcel Dashboard Webhook
+
+**IMPORTANT:** Log into your Xcel dashboard and configure these URLs:
+
+1. **Webhook URL** (required for payment notifications):
+   ```
+   https://getfund-cms-backend.vercel.app/api/payments/webhook
+   ```
+
+2. **Callback URL** (optional - for redirect after payment):
+   ```
+   https://getfund-website.vercel.app/payment/callback
+   ```
+
+Without the webhook URL configured, Xcel cannot notify your backend about payment status changes.
+
+### 5. Go Live
 
 Once testing is complete:
 1. Replace test credentials with production credentials
-2. Set `PAYMENT_TEST_MODE=false` (or remove the variable)
-3. Redeploy both frontend and backend
-4. Test with small real transaction
-5. Monitor Vercel logs for any issues
+2. Configure webhook URL in Xcel dashboard (see step 4 above)
+3. Set `PAYMENT_TEST_MODE=false` (or remove the variable)
+4. Redeploy both frontend and backend
+5. Test with small real transaction
+6. Monitor Vercel logs for any issues
 
 ---
 

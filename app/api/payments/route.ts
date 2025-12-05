@@ -106,6 +106,9 @@ export async function POST(request: NextRequest) {
       url: `${XCEL_API_URL}/v1/payments/initialize`,
       amount: body.amount,
       currency: body.currency,
+      payload: paymentPayload,
+      hasPublicKey: !!XCEL_PUBLIC_KEY,
+      publicKeyPrefix: XCEL_PUBLIC_KEY.substring(0, 20),
     });
 
     const response = await fetch(`${XCEL_API_URL}/v1/payments/initialize`, {
@@ -118,13 +121,23 @@ export async function POST(request: NextRequest) {
       body: JSON.stringify(paymentPayload),
     });
 
-    const data = await response.json();
+    let data;
+    const responseText = await response.text();
 
-    console.log('Xcel API response:', {
+    console.log('Xcel API raw response:', {
       status: response.status,
+      statusText: response.statusText,
       ok: response.ok,
-      data: data,
+      headers: Object.fromEntries(response.headers.entries()),
+      bodyText: responseText,
     });
+
+    try {
+      data = JSON.parse(responseText);
+    } catch (e) {
+      console.error('Failed to parse Xcel response as JSON:', responseText);
+      data = { error: 'Invalid response format from payment gateway' };
+    }
 
     if (!response.ok) {
       console.error('Xcel payment initialization failed:', {
