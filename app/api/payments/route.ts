@@ -137,9 +137,18 @@ export async function POST(request: NextRequest) {
     }, { headers: corsHeaders });
   } catch (error) {
     console.error('Payment initialization error:', error);
+
+    // Return more detailed error information
+    const errorMessage = error instanceof Error ? error.message : 'Internal server error';
+
     return NextResponse.json(
-      { success: false, error: 'Internal server error' },
-      { status: 500, headers: corsHeaders }
+      {
+        success: false,
+        error: 'Payment initialization failed',
+        details: errorMessage,
+        suggestion: 'Please try again or contact support if the issue persists'
+      },
+      { status: 200, headers: corsHeaders } // Return 200 so frontend can read the error
     );
   }
 }
