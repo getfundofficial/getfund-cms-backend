@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 const XCEL_API_URL = 'https://api.xcelapp.com';
 const XCEL_PUBLIC_KEY = process.env.XCEL_PUBLIC_KEY || '';
 const XCEL_WEBHOOK_SECRET = process.env.XCEL_WEBHOOK_SECRET || '';
+const USE_TEST_MODE = process.env.PAYMENT_TEST_MODE === 'true';
 
 // CORS headers
 const corsHeaders = {
@@ -33,12 +34,13 @@ export async function OPTIONS() {
 export async function POST(request: NextRequest) {
   try {
     const body: PaymentRequest = await request.json();
-    
+
     console.log('Payment request received:', {
       amount: body.amount,
       currency: body.currency,
       method: body.paymentMethod,
       email: body.customerEmail,
+      testMode: USE_TEST_MODE,
     });
 
     // Validate required fields
@@ -49,22 +51,38 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Validate API keys
+    // TEST MODE - Skip Xcel API and return mock success
+    if (USE_TEST_MODE) {
+      console.log('TEST MODE: Simulating successful payment');
+      const mockPaymentUrl = `${process.env.NEXT_PUBLIC_WEBSITE_URL || 'https://getfund-website.vercel.app'}/payment/test-success?reference=${body.reference}&amount=${body.amount}`;
+
+      return NextResponse.json({
+        success: true,
+        data: {
+          paymentUrl: mockPaymentUrl,
+          reference: body.reference,
+          accessCode: 'TEST_ACCESS_CODE',
+        },
+        testMode: true,
+      }, { headers: corsHeaders });
+    }
+
+    // PRODUCTION MODE - Validate API keys
     if (!XCEL_PUBLIC_KEY || !XCEL_WEBHOOK_SECRET) {
       console.error('Payment gateway configuration missing:', {
         hasPublicKey: !!XCEL_PUBLIC_KEY,
         hasWebhookSecret: !!XCEL_WEBHOOK_SECRET,
       });
       return NextResponse.json(
-        { 
-          success: false, 
+        {
+          success: false,
           error: 'Payment gateway not configured. Please contact support.',
           debug: process.env.NODE_ENV === 'development' ? {
             hasPublicKey: !!XCEL_PUBLIC_KEY,
             hasWebhookSecret: !!XCEL_WEBHOOK_SECRET,
           } : undefined
         },
-        { status: 500, headers: corsHeaders }
+        { status: 200, headers: corsHeaders }
       );
     }
 
@@ -101,7 +119,7 @@ export async function POST(request: NextRequest) {
     });
 
     const data = await response.json();
-    
+
     console.log('Xcel API response:', {
       status: response.status,
       ok: response.ok,
@@ -114,11 +132,11 @@ export async function POST(request: NextRequest) {
         statusText: response.statusText,
         data: data,
       });
-      
+
       // Return detailed error from Xcel
       return NextResponse.json(
-        { 
-          success: false, 
+        {
+          success: false,
           error: data.message || data.error || 'Payment initialization failed',
           xcelError: data,
           suggestion: 'Please check your Xcel API credentials and account status'
