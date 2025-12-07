@@ -52,6 +52,21 @@ export async function GET(request: NextRequest) {
          AND updated_at >= NOW() - INTERVAL '7 days'`
     );
 
+    // Get total pages count
+    const pagesResult = await query(
+      `SELECT COUNT(*) as count
+       FROM pages
+       WHERE deleted_at IS NULL`
+    );
+
+    // Get total news articles count
+    const newsResult = await query(
+      `SELECT COUNT(*) as count
+       FROM content
+       WHERE deleted_at IS NULL
+         AND type = 'news'`
+    );
+
     const stats = {
       total: 0,
       draft: 0,
@@ -61,6 +76,8 @@ export async function GET(request: NextRequest) {
       changes_requested: 0,
       by_type: {} as Record<string, number>,
       recent_updates: parseInt(recentResult.rows[0]?.count || '0'),
+      total_pages: parseInt(pagesResult.rows[0]?.count || '0'),
+      total_news: parseInt(newsResult.rows[0]?.count || '0'),
     };
 
     // Process status counts
