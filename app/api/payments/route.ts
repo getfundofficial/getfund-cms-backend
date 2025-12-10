@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 const XCEL_API_URL = 'https://api.xcelapp.com';
+const XCEL_MERCHANT_ID = process.env.XCEL_MERCHANT_ID || '';
 const XCEL_PUBLIC_KEY = process.env.XCEL_PUBLIC_KEY || '';
-const XCEL_WEBHOOK_SECRET = process.env.XCEL_WEBHOOK_SECRET || '';
 const USE_TEST_MODE = process.env.PAYMENT_TEST_MODE === 'true';
 
 // CORS headers
@@ -50,10 +50,10 @@ export async function POST(request: NextRequest) {
       metadata: body.metadata,
       testMode: USE_TEST_MODE,
       env: {
+        hasMerchantId: !!XCEL_MERCHANT_ID,
+        merchantIdPrefix: XCEL_MERCHANT_ID ? XCEL_MERCHANT_ID.substring(0, 10) + '...' : 'MISSING',
         hasPublicKey: !!XCEL_PUBLIC_KEY,
-        publicKeyPrefix: XCEL_PUBLIC_KEY ? XCEL_PUBLIC_KEY.substring(0, 15) + '...' : 'MISSING',
-        hasWebhookSecret: !!XCEL_WEBHOOK_SECRET,
-        webhookSecretPrefix: XCEL_WEBHOOK_SECRET ? XCEL_WEBHOOK_SECRET.substring(0, 10) + '...' : 'MISSING',
+        publicKeyPrefix: XCEL_PUBLIC_KEY ? XCEL_PUBLIC_KEY.substring(0, 30) + '...' : 'MISSING',
         xcelApiUrl: XCEL_API_URL,
         websiteUrl: process.env.NEXT_PUBLIC_WEBSITE_URL,
       }
@@ -97,13 +97,13 @@ export async function POST(request: NextRequest) {
 
     console.log('[DEBUG] PRODUCTION MODE ACTIVE - Proceeding with Xcel API');
 
-    // PRODUCTION MODE - Validate API keys
-    if (!XCEL_PUBLIC_KEY || !XCEL_WEBHOOK_SECRET) {
+    // PRODUCTION MODE - Validate API credentials
+    if (!XCEL_MERCHANT_ID || !XCEL_PUBLIC_KEY) {
       console.error('[DEBUG] ERROR - Payment gateway configuration missing:', {
+        hasMerchantId: !!XCEL_MERCHANT_ID,
         hasPublicKey: !!XCEL_PUBLIC_KEY,
-        hasWebhookSecret: !!XCEL_WEBHOOK_SECRET,
+        merchantIdLength: XCEL_MERCHANT_ID ? XCEL_MERCHANT_ID.length : 0,
         publicKeyLength: XCEL_PUBLIC_KEY ? XCEL_PUBLIC_KEY.length : 0,
-        webhookSecretLength: XCEL_WEBHOOK_SECRET ? XCEL_WEBHOOK_SECRET.length : 0,
       });
       console.log('========== PAYMENT REQUEST END (CONFIG ERROR) ==========\n');
       return NextResponse.json(
@@ -111,8 +111,8 @@ export async function POST(request: NextRequest) {
           success: false,
           error: 'Payment gateway not configured. Please contact support.',
           debug: {
+            hasMerchantId: !!XCEL_MERCHANT_ID,
             hasPublicKey: !!XCEL_PUBLIC_KEY,
-            hasWebhookSecret: !!XCEL_WEBHOOK_SECRET,
             timestamp: new Date().toISOString(),
           }
         },
@@ -120,45 +120,44 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    console.log('[DEBUG] API keys validated successfully');
+    console.log('[DEBUG] API credentials validated successfully');
 
-    // Initialize payment with Xcel
+    // Initialize payment with Xcel Checkout URL API
     const paymentPayload = {
-      amount: body.amount,
+      amount: body.amount.toString(),
       currency: body.currency,
-      payment_method: body.paymentMethod,
-      customer: {
-        email: body.customerEmail,
-        phone: body.customerPhone,
-      },
-      reference: body.reference,
+      client_transaction_id: body.reference,
+      customer_name: body.metadata?.donorName || 'Anonymous Donor',
+      customer_email: body.customerEmail,
+      customer_phone: body.customerPhone,
       description: body.description,
+      channel: 'WEB',
       metadata: body.metadata,
-      callback_url: `${process.env.NEXT_PUBLIC_WEBSITE_URL || 'https://getfund-website.vercel.app'}/payment/callback`,
-      return_url: `${process.env.NEXT_PUBLIC_WEBSITE_URL || 'https://getfund-website.vercel.app'}/payment/success`,
+      redirect_url: `${process.env.NEXT_PUBLIC_WEBSITE_URL || 'https://getfund-website.vercel.app'}/payment/callback`,
+      webhook_url: `${process.env.NEXT_PUBLIC_WEBSITE_URL || 'https://getfund-cms-backend.vercel.app'}/api/payments/webhook`,
     };
 
-    console.log('[DEBUG] Initializing payment with Xcel API:', {
-      url: `${XCEL_API_URL}/v1/payments/initialize`,
+    console.log('[DEBUG] Initializing payment with Xcel Checkout URL API:', {
+      url: `${XCEL_API_URL}/transactions-service/paygate/generate-payment-link`,
       method: 'POST',
       amount: body.amount,
       currency: body.currency,
-      paymentMethod: body.paymentMethod,
+      clientTransactionId: body.reference,
       payload: paymentPayload,
+      hasMerchantId: !!XCEL_MERCHANT_ID,
       hasPublicKey: !!XCEL_PUBLIC_KEY,
-      publicKeyPrefix: XCEL_PUBLIC_KEY.substring(0, 20) + '...',
       timestamp: new Date().toISOString(),
     });
 
     console.log('[DEBUG] Making fetch request to Xcel...');
     const fetchStartTime = Date.now();
 
-    const response = await fetch(`${XCEL_API_URL}/v1/payments/initialize`, {
+    const response = await fetch(`${XCEL_API_URL}/transactions-service/paygate/generate-payment-link`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${XCEL_PUBLIC_KEY}`,
-        'X-Webhook-Secret': XCEL_WEBHOOK_SECRET,
+        'X-MERCHANT-ID': XCEL_MERCHANT_ID,
+        'X-PUBLIC-KEY': XCEL_PUBLIC_KEY,
       },
       body: JSON.stringify(paymentPayload),
     });
@@ -219,17 +218,22 @@ export async function POST(request: NextRequest) {
     }
 
     console.log('[DEBUG] Xcel payment initialization successful!');
-    console.log('[DEBUG] Payment URL:', data.payment_url || data.authorization_url);
-    console.log('[DEBUG] Reference:', data.reference);
-    console.log('[DEBUG] Access Code:', data.access_code);
+    console.log('[DEBUG] Payment Link:', data.data?.payment_link);
+    console.log('[DEBUG] Transaction ID:', data.data?.transaction_id);
+    console.log('[DEBUG] Payment Code:', data.data?.payment_code);
+    console.log('[DEBUG] Status:', data.status);
     console.log('========== PAYMENT REQUEST END (SUCCESS) ==========\n');
+
+    // Construct full payment URL
+    const fullPaymentUrl = `https://pay.xcelapp.com/${data.data?.payment_link}`;
 
     return NextResponse.json({
       success: true,
       data: {
-        paymentUrl: data.payment_url || data.authorization_url,
-        reference: data.reference,
-        accessCode: data.access_code,
+        paymentUrl: fullPaymentUrl,
+        reference: data.data?.client_transaction_id || body.reference,
+        accessCode: data.data?.payment_code,
+        transactionId: data.data?.transaction_id,
       },
     }, { headers: corsHeaders });
   } catch (error) {
@@ -286,14 +290,14 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    console.log('[DEBUG] Calling Xcel verification API...');
+    console.log('[DEBUG] Calling Xcel transaction status API...');
     const fetchStartTime = Date.now();
 
-    const response = await fetch(`${XCEL_API_URL}/v1/payments/verify/${reference}`, {
+    const response = await fetch(`${XCEL_API_URL}/transactions-service/paygate/tsq/${reference}`, {
       method: 'GET',
       headers: {
-        'Authorization': `Bearer ${XCEL_PUBLIC_KEY}`,
-        'X-Webhook-Secret': XCEL_WEBHOOK_SECRET,
+        'X-MERCHANT-ID': XCEL_MERCHANT_ID,
+        'X-PUBLIC-KEY': XCEL_PUBLIC_KEY,
       },
     });
 
