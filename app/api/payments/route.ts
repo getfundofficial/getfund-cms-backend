@@ -32,29 +32,57 @@ export async function OPTIONS() {
 }
 
 export async function POST(request: NextRequest) {
+  const timestamp = new Date().toISOString();
+  console.log(`\n========== PAYMENT REQUEST START [${timestamp}] ==========`);
+
   try {
     const body: PaymentRequest = await request.json();
 
-    console.log('Payment request received:', {
+    console.log('[DEBUG] Payment request received:', {
+      timestamp,
       amount: body.amount,
       currency: body.currency,
       method: body.paymentMethod,
       email: body.customerEmail,
+      phone: body.customerPhone || 'Not provided',
+      reference: body.reference,
+      description: body.description,
+      metadata: body.metadata,
       testMode: USE_TEST_MODE,
+      env: {
+        hasPublicKey: !!XCEL_PUBLIC_KEY,
+        publicKeyPrefix: XCEL_PUBLIC_KEY ? XCEL_PUBLIC_KEY.substring(0, 15) + '...' : 'MISSING',
+        hasWebhookSecret: !!XCEL_WEBHOOK_SECRET,
+        webhookSecretPrefix: XCEL_WEBHOOK_SECRET ? XCEL_WEBHOOK_SECRET.substring(0, 10) + '...' : 'MISSING',
+        xcelApiUrl: XCEL_API_URL,
+        websiteUrl: process.env.NEXT_PUBLIC_WEBSITE_URL,
+      }
     });
 
     // Validate required fields
     if (!body.amount || !body.currency || !body.paymentMethod || !body.customerEmail) {
+      console.error('[DEBUG] Validation failed - Missing required fields:', {
+        hasAmount: !!body.amount,
+        hasCurrency: !!body.currency,
+        hasPaymentMethod: !!body.paymentMethod,
+        hasCustomerEmail: !!body.customerEmail,
+      });
+      console.log('========== PAYMENT REQUEST END (VALIDATION ERROR) ==========\n');
       return NextResponse.json(
         { success: false, error: 'Missing required fields' },
         { status: 400, headers: corsHeaders }
       );
     }
 
+    console.log('[DEBUG] Validation passed - All required fields present');
+
     // TEST MODE - Skip Xcel API and return mock success
     if (USE_TEST_MODE) {
-      console.log('TEST MODE: Simulating successful payment');
+      console.log('[DEBUG] TEST MODE ACTIVE - Bypassing Xcel API');
       const mockPaymentUrl = `${process.env.NEXT_PUBLIC_WEBSITE_URL || 'https://getfund-website.vercel.app'}/payment/test-success?reference=${body.reference}&amount=${body.amount}`;
+
+      console.log('[DEBUG] Mock payment URL generated:', mockPaymentUrl);
+      console.log('========== PAYMENT REQUEST END (TEST MODE SUCCESS) ==========\n');
 
       return NextResponse.json({
         success: true,
@@ -67,24 +95,32 @@ export async function POST(request: NextRequest) {
       }, { headers: corsHeaders });
     }
 
+    console.log('[DEBUG] PRODUCTION MODE ACTIVE - Proceeding with Xcel API');
+
     // PRODUCTION MODE - Validate API keys
     if (!XCEL_PUBLIC_KEY || !XCEL_WEBHOOK_SECRET) {
-      console.error('Payment gateway configuration missing:', {
+      console.error('[DEBUG] ERROR - Payment gateway configuration missing:', {
         hasPublicKey: !!XCEL_PUBLIC_KEY,
         hasWebhookSecret: !!XCEL_WEBHOOK_SECRET,
+        publicKeyLength: XCEL_PUBLIC_KEY ? XCEL_PUBLIC_KEY.length : 0,
+        webhookSecretLength: XCEL_WEBHOOK_SECRET ? XCEL_WEBHOOK_SECRET.length : 0,
       });
+      console.log('========== PAYMENT REQUEST END (CONFIG ERROR) ==========\n');
       return NextResponse.json(
         {
           success: false,
           error: 'Payment gateway not configured. Please contact support.',
-          debug: process.env.NODE_ENV === 'development' ? {
+          debug: {
             hasPublicKey: !!XCEL_PUBLIC_KEY,
             hasWebhookSecret: !!XCEL_WEBHOOK_SECRET,
-          } : undefined
+            timestamp: new Date().toISOString(),
+          }
         },
         { status: 200, headers: corsHeaders }
       );
     }
+
+    console.log('[DEBUG] API keys validated successfully');
 
     // Initialize payment with Xcel
     const paymentPayload = {
@@ -102,14 +138,20 @@ export async function POST(request: NextRequest) {
       return_url: `${process.env.NEXT_PUBLIC_WEBSITE_URL || 'https://getfund-website.vercel.app'}/payment/success`,
     };
 
-    console.log('Initializing payment with Xcel:', {
+    console.log('[DEBUG] Initializing payment with Xcel API:', {
       url: `${XCEL_API_URL}/v1/payments/initialize`,
+      method: 'POST',
       amount: body.amount,
       currency: body.currency,
+      paymentMethod: body.paymentMethod,
       payload: paymentPayload,
       hasPublicKey: !!XCEL_PUBLIC_KEY,
-      publicKeyPrefix: XCEL_PUBLIC_KEY.substring(0, 20),
+      publicKeyPrefix: XCEL_PUBLIC_KEY.substring(0, 20) + '...',
+      timestamp: new Date().toISOString(),
     });
+
+    console.log('[DEBUG] Making fetch request to Xcel...');
+    const fetchStartTime = Date.now();
 
     const response = await fetch(`${XCEL_API_URL}/v1/payments/initialize`, {
       method: 'POST',
@@ -121,30 +163,43 @@ export async function POST(request: NextRequest) {
       body: JSON.stringify(paymentPayload),
     });
 
+    const fetchDuration = Date.now() - fetchStartTime;
+    console.log(`[DEBUG] Fetch completed in ${fetchDuration}ms`);
+
     let data;
     const responseText = await response.text();
 
-    console.log('Xcel API raw response:', {
+    console.log('[DEBUG] Xcel API raw response:', {
       status: response.status,
       statusText: response.statusText,
       ok: response.ok,
+      duration: `${fetchDuration}ms`,
       headers: Object.fromEntries(response.headers.entries()),
-      bodyText: responseText,
+      bodyLength: responseText.length,
+      bodyPreview: responseText.substring(0, 200),
+      fullBody: responseText,
     });
 
     try {
       data = JSON.parse(responseText);
+      console.log('[DEBUG] Successfully parsed Xcel response JSON:', data);
     } catch (e) {
-      console.error('Failed to parse Xcel response as JSON:', responseText);
+      console.error('[DEBUG] ERROR - Failed to parse Xcel response as JSON:', {
+        error: e instanceof Error ? e.message : 'Unknown error',
+        responseText: responseText,
+        responseTextLength: responseText.length,
+      });
       data = { error: 'Invalid response format from payment gateway' };
     }
 
     if (!response.ok) {
-      console.error('Xcel payment initialization failed:', {
+      console.error('[DEBUG] ERROR - Xcel payment initialization failed:', {
         status: response.status,
         statusText: response.statusText,
         data: data,
+        fullResponse: responseText,
       });
+      console.log('========== PAYMENT REQUEST END (XCEL API ERROR) ==========\n');
 
       // Return detailed error from Xcel
       return NextResponse.json(
@@ -152,11 +207,22 @@ export async function POST(request: NextRequest) {
           success: false,
           error: data.message || data.error || 'Payment initialization failed',
           xcelError: data,
-          suggestion: 'Please check your Xcel API credentials and account status'
+          suggestion: 'Please check your Xcel API credentials and account status',
+          debug: {
+            status: response.status,
+            statusText: response.statusText,
+            timestamp: new Date().toISOString(),
+          }
         },
         { status: 200, headers: corsHeaders } // Return 200 so frontend can read the error
       );
     }
+
+    console.log('[DEBUG] Xcel payment initialization successful!');
+    console.log('[DEBUG] Payment URL:', data.payment_url || data.authorization_url);
+    console.log('[DEBUG] Reference:', data.reference);
+    console.log('[DEBUG] Access Code:', data.access_code);
+    console.log('========== PAYMENT REQUEST END (SUCCESS) ==========\n');
 
     return NextResponse.json({
       success: true,
@@ -167,17 +233,29 @@ export async function POST(request: NextRequest) {
       },
     }, { headers: corsHeaders });
   } catch (error) {
-    console.error('Payment initialization error:', error);
+    console.error('[DEBUG] CRITICAL ERROR - Payment initialization exception:', {
+      error: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : undefined,
+      type: error instanceof Error ? error.constructor.name : typeof error,
+      timestamp: new Date().toISOString(),
+    });
+    console.log('========== PAYMENT REQUEST END (EXCEPTION) ==========\n');
 
     // Return more detailed error information
     const errorMessage = error instanceof Error ? error.message : 'Internal server error';
+    const errorStack = error instanceof Error ? error.stack : undefined;
 
     return NextResponse.json(
       {
         success: false,
         error: 'Payment initialization failed',
         details: errorMessage,
-        suggestion: 'Please try again or contact support if the issue persists'
+        suggestion: 'Please try again or contact support if the issue persists',
+        debug: {
+          errorType: error instanceof Error ? error.constructor.name : typeof error,
+          stack: errorStack,
+          timestamp: new Date().toISOString(),
+        }
       },
       { status: 200, headers: corsHeaders } // Return 200 so frontend can read the error
     );
@@ -186,16 +264,30 @@ export async function POST(request: NextRequest) {
 
 // Verify payment status
 export async function GET(request: NextRequest) {
+  const timestamp = new Date().toISOString();
+  console.log(`\n========== PAYMENT VERIFICATION START [${timestamp}] ==========`);
+
   try {
     const { searchParams } = new URL(request.url);
     const reference = searchParams.get('reference');
 
+    console.log('[DEBUG] Payment verification request:', {
+      timestamp,
+      reference: reference || 'MISSING',
+      fullUrl: request.url,
+    });
+
     if (!reference) {
+      console.error('[DEBUG] ERROR - Payment reference missing');
+      console.log('========== PAYMENT VERIFICATION END (NO REFERENCE) ==========\n');
       return NextResponse.json(
         { success: false, error: 'Payment reference is required' },
         { status: 400, headers: corsHeaders }
       );
     }
+
+    console.log('[DEBUG] Calling Xcel verification API...');
+    const fetchStartTime = Date.now();
 
     const response = await fetch(`${XCEL_API_URL}/v1/payments/verify/${reference}`, {
       method: 'GET',
@@ -205,14 +297,39 @@ export async function GET(request: NextRequest) {
       },
     });
 
+    const fetchDuration = Date.now() - fetchStartTime;
+    console.log(`[DEBUG] Verification fetch completed in ${fetchDuration}ms`);
+
     const data = await response.json();
 
+    console.log('[DEBUG] Xcel verification response:', {
+      status: response.status,
+      statusText: response.statusText,
+      ok: response.ok,
+      duration: `${fetchDuration}ms`,
+      data: data,
+    });
+
     if (!response.ok) {
+      console.error('[DEBUG] ERROR - Payment verification failed:', {
+        status: response.status,
+        error: data.message || 'Unknown error',
+        data: data,
+      });
+      console.log('========== PAYMENT VERIFICATION END (API ERROR) ==========\n');
       return NextResponse.json(
         { success: false, error: data.message || 'Payment verification failed' },
         { status: response.status, headers: corsHeaders }
       );
     }
+
+    console.log('[DEBUG] Payment verification successful:', {
+      status: data.status,
+      amount: data.amount,
+      currency: data.currency,
+      paidAt: data.paid_at,
+    });
+    console.log('========== PAYMENT VERIFICATION END (SUCCESS) ==========\n');
 
     return NextResponse.json({
       success: true,
@@ -225,7 +342,12 @@ export async function GET(request: NextRequest) {
       },
     }, { headers: corsHeaders });
   } catch (error) {
-    console.error('Payment verification error:', error);
+    console.error('[DEBUG] CRITICAL ERROR - Payment verification exception:', {
+      error: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : undefined,
+      timestamp: new Date().toISOString(),
+    });
+    console.log('========== PAYMENT VERIFICATION END (EXCEPTION) ==========\n');
     return NextResponse.json(
       { success: false, error: 'Internal server error' },
       { status: 500, headers: corsHeaders }
