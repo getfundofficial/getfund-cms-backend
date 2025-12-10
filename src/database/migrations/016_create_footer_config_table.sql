@@ -31,7 +31,7 @@ CREATE TABLE IF NOT EXISTS footer_config (
   is_active BOOLEAN DEFAULT true,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  updated_by INTEGER REFERENCES users(id)
+  updated_by UUID REFERENCES users(id) ON DELETE SET NULL
 );
 
 -- Only allow one active configuration
