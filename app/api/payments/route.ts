@@ -106,9 +106,12 @@ export async function POST(request: NextRequest) {
         amount: body.amount.toString(),
         email: body.customerEmail,
         reference: body.reference,
-        description: body.description,
+        description: body.description || 'Donation to GETFUND',
         redirect_url: `${process.env.NEXT_PUBLIC_WEBSITE_URL || 'https://getfund-website.vercel.app'}/payment/callback`,
         callback_url: `${process.env.NEXT_PUBLIC_WEBSITE_URL || 'https://getfund-website.vercel.app'}/payment/callback`,
+        purpose: 'Donation',
+        item: 'Donation to GETFUND',
+        payment_for: 'Donation',
       });
 
       if (body.customerPhone) {
