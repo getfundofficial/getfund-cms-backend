@@ -292,6 +292,12 @@ export async function GET(request: NextRequest) {
     }
 
     console.log('[DEBUG] Calling Xcel transaction status API...');
+    console.log('[DEBUG] API URL:', `${XCEL_API_URL}/transactions-service/paygate/tsq/${reference}`);
+    console.log('[DEBUG] Headers:', {
+      'X-MERCHANT-ID': XCEL_MERCHANT_ID?.substring(0, 10) + '...',
+      'X-PUBLIC-KEY': XCEL_PUBLIC_KEY?.substring(0, 20) + '...',
+    });
+
     const fetchStartTime = Date.now();
 
     const response = await fetch(`${XCEL_API_URL}/transactions-service/paygate/tsq/${reference}`, {
@@ -305,7 +311,16 @@ export async function GET(request: NextRequest) {
     const fetchDuration = Date.now() - fetchStartTime;
     console.log(`[DEBUG] Verification fetch completed in ${fetchDuration}ms`);
 
-    const data = await response.json();
+    let data;
+    const responseText = await response.text();
+    console.log('[DEBUG] Raw response:', responseText);
+
+    try {
+      data = JSON.parse(responseText);
+    } catch (e) {
+      console.error('[DEBUG] Failed to parse verification response:', e);
+      data = { error: 'Invalid response from payment gateway' };
+    }
 
     console.log('[DEBUG] Xcel verification response:', {
       status: response.status,
