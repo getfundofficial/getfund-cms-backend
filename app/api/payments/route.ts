@@ -134,7 +134,7 @@ export async function POST(request: NextRequest) {
       channel: 'WEB',
       metadata: body.metadata,
       redirect_url: `${process.env.NEXT_PUBLIC_WEBSITE_URL || 'https://getfund-website.vercel.app'}/payment/callback`,
-      webhook_url: `${process.env.NEXT_PUBLIC_WEBSITE_URL || 'https://getfund-cms-backend.vercel.app'}/api/payments/webhook`,
+      webhook_url: 'https://getfund-cms-backend.vercel.app/api/payments/webhook',
     };
 
     console.log('[DEBUG] Initializing payment with Xcel Checkout URL API:', {
