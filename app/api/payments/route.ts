@@ -172,11 +172,20 @@ export async function POST(request: NextRequest) {
       customer_name: body.metadata?.donorName || 'Anonymous Donor',
       customer_email: body.customerEmail,
       customer_phone: body.customerPhone,
-      description: body.description,
+      description: body.description || 'Donation to GETFUND',
       channel: 'WEB',
-      metadata: body.metadata,
+      metadata: {
+        ...body.metadata,
+        purpose: 'Donation',
+        category: 'Donation',
+        payment_for: 'Donation to GETFUND',
+      },
       redirect_url: `${process.env.NEXT_PUBLIC_WEBSITE_URL || 'https://getfund-website.vercel.app'}/payment/callback`,
       webhook_url: 'https://getfund-cms-backend.vercel.app/api/payments/webhook',
+      // Additional fields to try to pre-fill/hide dropdown
+      purpose: 'Donation',
+      item_name: 'Donation to GETFUND',
+      payment_category: 'Donation',
     };
 
     console.log('[DEBUG] Initializing payment with Xcel Checkout URL API:', {
