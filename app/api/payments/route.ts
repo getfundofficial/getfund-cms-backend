@@ -107,6 +107,8 @@ export async function POST(request: NextRequest) {
         email: body.customerEmail,
         reference: body.reference,
         description: body.description,
+        redirect_url: `${process.env.NEXT_PUBLIC_WEBSITE_URL || 'https://getfund-website.vercel.app'}/payment/callback`,
+        callback_url: `${process.env.NEXT_PUBLIC_WEBSITE_URL || 'https://getfund-website.vercel.app'}/payment/callback`,
       });
 
       if (body.customerPhone) {
