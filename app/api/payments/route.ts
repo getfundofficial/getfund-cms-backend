@@ -100,9 +100,26 @@ export async function POST(request: NextRequest) {
     // Use direct payment link if merchant ID appears to be a payment link ID
     if (XCEL_MERCHANT_ID === 'j6ulbdt0c' || XCEL_MERCHANT_ID.length < 15) {
       console.log('[DEBUG] Using direct payment link (merchant ID is payment link ID)');
-      const paymentUrl = `https://paygate.xcelapp.com/pay/${XCEL_MERCHANT_ID}`;
 
-      console.log('[DEBUG] Direct payment link:', paymentUrl);
+      // Construct payment URL with parameters
+      const params = new URLSearchParams({
+        amount: body.amount.toString(),
+        email: body.customerEmail,
+        reference: body.reference,
+        description: body.description,
+      });
+
+      if (body.customerPhone) {
+        params.append('phone', body.customerPhone);
+      }
+
+      if (body.metadata?.donorName) {
+        params.append('name', body.metadata.donorName);
+      }
+
+      const paymentUrl = `https://paygate.xcelapp.com/pay/${XCEL_MERCHANT_ID}?${params.toString()}`;
+
+      console.log('[DEBUG] Direct payment link with params:', paymentUrl);
       console.log('========== PAYMENT REQUEST END (DIRECT LINK) ==========\n');
 
       return NextResponse.json({
