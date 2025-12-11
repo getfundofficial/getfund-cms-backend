@@ -224,13 +224,14 @@ export async function POST(request: NextRequest) {
     console.log('[DEBUG] Status:', data.status);
     console.log('========== PAYMENT REQUEST END (SUCCESS) ==========\n');
 
-    // Construct full payment URL
-    const fullPaymentUrl = `https://pay.xcelapp.com/${data.data?.payment_link}`;
+    // Use the payment link directly from Xcel API response
+    const paymentLink = data.data?.payment_link;
+    console.log('[DEBUG] Final Payment URL:', paymentLink);
 
     return NextResponse.json({
       success: true,
       data: {
-        paymentUrl: fullPaymentUrl,
+        paymentUrl: paymentLink,
         reference: data.data?.client_transaction_id || body.reference,
         accessCode: data.data?.payment_code,
         transactionId: data.data?.transaction_id,
