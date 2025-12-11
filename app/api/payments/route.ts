@@ -95,7 +95,27 @@ export async function POST(request: NextRequest) {
       }, { headers: corsHeaders });
     }
 
-    console.log('[DEBUG] PRODUCTION MODE ACTIVE - Proceeding with Xcel API');
+    console.log('[DEBUG] PRODUCTION MODE ACTIVE - Proceeding with Xcel payment');
+
+    // Use direct payment link if merchant ID appears to be a payment link ID
+    if (XCEL_MERCHANT_ID === 'j6ulbdt0c' || XCEL_MERCHANT_ID.length < 15) {
+      console.log('[DEBUG] Using direct payment link (merchant ID is payment link ID)');
+      const paymentUrl = `https://paygate.xcelapp.com/pay/${XCEL_MERCHANT_ID}`;
+
+      console.log('[DEBUG] Direct payment link:', paymentUrl);
+      console.log('========== PAYMENT REQUEST END (DIRECT LINK) ==========\n');
+
+      return NextResponse.json({
+        success: true,
+        data: {
+          paymentUrl: paymentUrl,
+          reference: body.reference,
+          accessCode: XCEL_MERCHANT_ID,
+        },
+      }, { headers: corsHeaders });
+    }
+
+    console.log('[DEBUG] Using Xcel API integration');
 
     // PRODUCTION MODE - Validate API credentials
     if (!XCEL_MERCHANT_ID || !XCEL_PUBLIC_KEY) {
