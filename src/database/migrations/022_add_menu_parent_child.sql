@@ -40,6 +40,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
+DROP TRIGGER IF EXISTS prevent_circular_menu_hierarchy_trigger ON pages;
 CREATE TRIGGER prevent_circular_menu_hierarchy_trigger
   BEFORE INSERT OR UPDATE ON pages
   FOR EACH ROW

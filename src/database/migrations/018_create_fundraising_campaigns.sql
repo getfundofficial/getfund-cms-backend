@@ -38,10 +38,10 @@ CREATE TABLE IF NOT EXISTS fundraising_campaigns (
 );
 
 -- Performance indexes
-CREATE INDEX idx_campaigns_status ON fundraising_campaigns(status) WHERE deleted_at IS NULL;
-CREATE INDEX idx_campaigns_featured ON fundraising_campaigns(is_featured) WHERE deleted_at IS NULL;
-CREATE INDEX idx_campaigns_slug ON fundraising_campaigns(slug) WHERE deleted_at IS NULL;
-CREATE INDEX idx_campaigns_display_order ON fundraising_campaigns(display_order, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_campaigns_status ON fundraising_campaigns(status) WHERE deleted_at IS NULL;
+CREATE INDEX IF NOT EXISTS idx_campaigns_featured ON fundraising_campaigns(is_featured) WHERE deleted_at IS NULL;
+CREATE INDEX IF NOT EXISTS idx_campaigns_slug ON fundraising_campaigns(slug) WHERE deleted_at IS NULL;
+CREATE INDEX IF NOT EXISTS idx_campaigns_display_order ON fundraising_campaigns(display_order, created_at DESC);
 
 -- Auto-update timestamp trigger
 CREATE OR REPLACE FUNCTION update_campaigns_timestamp()
@@ -52,6 +52,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
+DROP TRIGGER IF EXISTS update_campaigns_timestamp ON fundraising_campaigns;
 CREATE TRIGGER update_campaigns_timestamp
   BEFORE UPDATE ON fundraising_campaigns
   FOR EACH ROW

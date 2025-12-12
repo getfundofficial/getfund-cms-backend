@@ -43,11 +43,11 @@ CREATE TABLE IF NOT EXISTS campaign_donations (
 );
 
 -- Performance indexes
-CREATE INDEX idx_campaign_donations_campaign_id ON campaign_donations(campaign_id);
-CREATE INDEX idx_campaign_donations_status ON campaign_donations(payment_status);
-CREATE INDEX idx_campaign_donations_donor_email ON campaign_donations(donor_email);
-CREATE INDEX idx_campaign_donations_paid_at ON campaign_donations(paid_at DESC) WHERE paid_at IS NOT NULL;
-CREATE INDEX idx_campaign_donations_payment_ref ON campaign_donations(payment_reference);
+CREATE INDEX IF NOT EXISTS idx_campaign_donations_campaign_id ON campaign_donations(campaign_id);
+CREATE INDEX IF NOT EXISTS idx_campaign_donations_status ON campaign_donations(payment_status);
+CREATE INDEX IF NOT EXISTS idx_campaign_donations_donor_email ON campaign_donations(donor_email);
+CREATE INDEX IF NOT EXISTS idx_campaign_donations_paid_at ON campaign_donations(paid_at DESC) WHERE paid_at IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_campaign_donations_payment_ref ON campaign_donations(payment_reference);
 
 -- Auto-update timestamp trigger
 CREATE OR REPLACE FUNCTION update_campaign_donations_timestamp()
@@ -58,6 +58,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
+DROP TRIGGER IF EXISTS update_campaign_donations_timestamp ON campaign_donations;
 CREATE TRIGGER update_campaign_donations_timestamp
   BEFORE UPDATE ON campaign_donations
   FOR EACH ROW
@@ -93,6 +94,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
+DROP TRIGGER IF EXISTS update_campaign_raised_amount ON campaign_donations;
 CREATE TRIGGER update_campaign_raised_amount
   AFTER UPDATE ON campaign_donations
   FOR EACH ROW

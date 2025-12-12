@@ -16,26 +16,39 @@ export async function OPTIONS() {
  * Get all team members, optionally filtered by role
  * Query params:
  *  - role: board_chairman | board_member | management | historical_admin
+ *  - all: true - returns all members (including inactive) as flat array for CMS admin
  */
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const role = searchParams.get('role');
+    const all = searchParams.get('all');
 
     let data;
+
+    // If "all=true", return all members as flat array (for CMS admin)
+    if (all === 'true') {
+      data = await TeamMember.getAll(role || undefined);
+      return NextResponse.json({
+        success: true,
+        data,
+      }, { headers: corsHeaders });
+    }
 
     if (role) {
       data = await TeamMember.getActiveByRole(role as any);
     } else {
-      // Return all active members grouped by role
-      const [chairman, management, historical] = await Promise.all([
+      // Return all active members grouped by role (for public website)
+      const [chairman, boardMembers, management, historical] = await Promise.all([
         TeamMember.getBoardChairman(),
+        TeamMember.getActiveByRole('board_member'),
         TeamMember.getManagementTeam(),
         TeamMember.getHistoricalAdmins(),
       ]);
 
       data = {
         chairman,
+        board_members: boardMembers,
         management,
         historical_admins: historical,
       };

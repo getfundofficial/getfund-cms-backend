@@ -40,11 +40,11 @@ CREATE TABLE IF NOT EXISTS lottery_entries (
 );
 
 -- Performance indexes
-CREATE INDEX idx_lottery_entries_draw_month ON lottery_entries(draw_month) WHERE is_valid = true;
-CREATE INDEX idx_lottery_entries_donor_email ON lottery_entries(donor_email);
-CREATE INDEX idx_lottery_entries_campaign_id ON lottery_entries(campaign_id) WHERE campaign_id IS NOT NULL;
-CREATE INDEX idx_lottery_entries_is_winner ON lottery_entries(is_winner) WHERE is_winner = true;
-CREATE INDEX idx_lottery_entries_payment_ref ON lottery_entries(payment_reference);
+CREATE INDEX IF NOT EXISTS idx_lottery_entries_draw_month ON lottery_entries(draw_month) WHERE is_valid = true;
+CREATE INDEX IF NOT EXISTS idx_lottery_entries_donor_email ON lottery_entries(donor_email);
+CREATE INDEX IF NOT EXISTS idx_lottery_entries_campaign_id ON lottery_entries(campaign_id) WHERE campaign_id IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_lottery_entries_is_winner ON lottery_entries(is_winner) WHERE is_winner = true;
+CREATE INDEX IF NOT EXISTS idx_lottery_entries_payment_ref ON lottery_entries(payment_reference);
 
 -- Auto-update timestamp trigger
 CREATE OR REPLACE FUNCTION update_lottery_entries_timestamp()
@@ -55,6 +55,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
+DROP TRIGGER IF EXISTS update_lottery_entries_timestamp ON lottery_entries;
 CREATE TRIGGER update_lottery_entries_timestamp
   BEFORE UPDATE ON lottery_entries
   FOR EACH ROW
