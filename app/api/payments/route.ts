@@ -95,49 +95,7 @@ export async function POST(request: NextRequest) {
       }, { headers: corsHeaders });
     }
 
-    console.log('[DEBUG] PRODUCTION MODE ACTIVE - Proceeding with Xcel payment');
-
-    // Use direct payment link if merchant ID appears to be a payment link ID
-    if (XCEL_MERCHANT_ID === 'j6ulbdt0c' || XCEL_MERCHANT_ID.length < 15) {
-      console.log('[DEBUG] Using direct payment link (merchant ID is payment link ID)');
-
-      // Construct payment URL with parameters
-      const params = new URLSearchParams({
-        amount: body.amount.toString(),
-        email: body.customerEmail,
-        reference: body.reference,
-        description: body.description || 'Donation to GETFUND',
-        redirect_url: `${process.env.NEXT_PUBLIC_WEBSITE_URL || 'https://getfund-website.vercel.app'}/payment/callback`,
-        callback_url: `${process.env.NEXT_PUBLIC_WEBSITE_URL || 'https://getfund-website.vercel.app'}/payment/callback`,
-        purpose: 'Donation',
-        item: 'Donation to GETFUND',
-        payment_for: 'Donation',
-      });
-
-      if (body.customerPhone) {
-        params.append('phone', body.customerPhone);
-      }
-
-      if (body.metadata?.donorName) {
-        params.append('name', body.metadata.donorName);
-      }
-
-      const paymentUrl = `https://paygate.xcelapp.com/pay/${XCEL_MERCHANT_ID}?${params.toString()}`;
-
-      console.log('[DEBUG] Direct payment link with params:', paymentUrl);
-      console.log('========== PAYMENT REQUEST END (DIRECT LINK) ==========\n');
-
-      return NextResponse.json({
-        success: true,
-        data: {
-          paymentUrl: paymentUrl,
-          reference: body.reference,
-          accessCode: XCEL_MERCHANT_ID,
-        },
-      }, { headers: corsHeaders });
-    }
-
-    console.log('[DEBUG] Using Xcel API integration');
+    console.log('[DEBUG] PRODUCTION MODE ACTIVE - Using Xcel API integration');
 
     // PRODUCTION MODE - Validate API credentials
     if (!XCEL_MERCHANT_ID || !XCEL_PUBLIC_KEY) {
