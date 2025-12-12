@@ -122,7 +122,7 @@ export async function POST(request: NextRequest) {
         params.append('name', body.metadata.donorName);
       }
 
-      const paymentUrl = `https://paygate.xcelapp.com/pay/${XCEL_MERCHANT_ID}?${params.toString()}`;
+      const paymentUrl = 'https://paygate.xcelapp.com/v1/main/xcel?code=PMT251212N41UFY52O' //`https://paygate.xcelapp.com/pay/${XCEL_MERCHANT_ID}?${params.toString()}`;
 
       console.log('[DEBUG] Direct payment link with params:', paymentUrl);
       console.log('========== PAYMENT REQUEST END (DIRECT LINK) ==========\n');
@@ -275,14 +275,33 @@ export async function POST(request: NextRequest) {
     console.log('[DEBUG] Status:', data.status);
     console.log('========== PAYMENT REQUEST END (SUCCESS) ==========\n');
 
-    // Use the payment link directly from Xcel API response
+    // Construct full payment URL using the correct Xcel format
+    // Format: https://paygate.xcelapp.com/v1/main/xcel?code=PMT251212N41UFY52O
     const paymentLink = data.data?.payment_link;
-    console.log('[DEBUG] Final Payment URL:', paymentLink);
+    const paymentCode = data.data?.payment_code;
+
+    let fullPaymentUrl: string;
+
+    if (paymentLink?.startsWith('http')) {
+      // Already a full URL
+      fullPaymentUrl = paymentLink;
+    } else if (paymentLink?.startsWith('?code=')) {
+      // Starts with ?code=, use the new format
+      fullPaymentUrl = `https://paygate.xcelapp.com/v1/main/xcel${paymentLink}`;
+    } else if (paymentCode) {
+      // Use payment code to construct URL
+      fullPaymentUrl = `https://paygate.xcelapp.com/v1/main/xcel?code=${paymentCode}`;
+    } else {
+      // Fallback to old format
+      fullPaymentUrl = `https://paygate.xcelapp.com/pay/${paymentLink || paymentCode}`;
+    }
+
+    console.log('[DEBUG] Constructed payment URL:', fullPaymentUrl);
 
     return NextResponse.json({
       success: true,
       data: {
-        paymentUrl: paymentLink,
+        paymentUrl: fullPaymentUrl,
         reference: data.data?.client_transaction_id || body.reference,
         accessCode: data.data?.payment_code,
         transactionId: data.data?.transaction_id,
