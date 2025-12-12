@@ -199,6 +199,59 @@ async function seedDatabase() {
       );
 
       console.log(`✅ Migrated: ${result.rows[0].title}`);
+
+      // Create audit log for this content creation
+      await pool.query(
+        `INSERT INTO audit_logs (user_id, action, entity_type, entity_id, changes, ip_address, created_at)
+         VALUES ($1, $2, $3, $4, $5, $6, $7)
+         ON CONFLICT DO NOTHING`,
+        [
+          adminId,
+          'create',
+          'content',
+          result.rows[0].id,
+          JSON.stringify({ title: article.title, type: article.type, status: 'draft' }),
+          '127.0.0.1',
+          new Date(Date.now() - Math.random() * 7 * 24 * 60 * 60 * 1000) // Random time in past week
+        ]
+      );
+
+      // Create publish audit log
+      await pool.query(
+        `INSERT INTO audit_logs (user_id, action, entity_type, entity_id, changes, ip_address, created_at)
+         VALUES ($1, $2, $3, $4, $5, $6, $7)
+         ON CONFLICT DO NOTHING`,
+        [
+          adminId,
+          'publish',
+          'content',
+          result.rows[0].id,
+          JSON.stringify({ title: article.title, type: article.type, status: 'published' }),
+          '127.0.0.1',
+          new Date(Date.now() - Math.random() * 3 * 24 * 60 * 60 * 1000) // Random time in past 3 days
+        ]
+      );
+    }
+
+    // Create login audit logs for users
+    console.log('\n📋 Creating audit logs...');
+    for (const role of Object.keys(createdUsers)) {
+      const user = createdUsers[role];
+      await pool.query(
+        `INSERT INTO audit_logs (user_id, action, entity_type, entity_id, changes, ip_address, created_at)
+         VALUES ($1, $2, $3, $4, $5, $6, $7)
+         ON CONFLICT DO NOTHING`,
+        [
+          user.id,
+          'login',
+          'user',
+          user.id,
+          JSON.stringify({ email: user.email }),
+          '127.0.0.1',
+          new Date(Date.now() - Math.random() * 24 * 60 * 60 * 1000) // Random time in past day
+        ]
+      );
+      console.log(`✅ Created login audit log for: ${user.email}`);
     }
 
     console.log('\n🎉 Database seeded successfully!\n');
