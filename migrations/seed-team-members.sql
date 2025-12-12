@@ -43,7 +43,7 @@ INSERT INTO team_members (name, title, role, image_url, display_order, status) V
 
 -- Historical Administrators
 INSERT INTO team_members (name, title, role, image_url, date_range, display_order, status) VALUES
-('Mr. Fosubua Banahene', 'Administrator', 'historical_admin', '/images/about/fosubua-banahene.jpg', '2001-2009', 1, 'active'),
-('Mr. Sam Garbah', 'Administrator', 'historical_admin', '/images/about/sam-garbah.jpg', '2009-2017', 2, 'active'),
-('Dr. Richard A Boadu', 'Administrator', 'historical_admin', '/images/about/richard-boadu.jpg', '2017-2024', 3, 'active'),
-('Mr. Paul Adjei', 'Administrator', 'historical_admin', '/images/about/paul-adjei.jpg', '2025-Date', 4, 'active');
+('Mr. Fosubua Banahene', 'Administrator', 'historical_admin', '/images/board/s8507362-member1.jpg', '2001-2009', 1, 'active'),
+('Mr. Sam Garbah', 'Administrator', 'historical_admin', '/images/board/s8507358-member2.jpg', '2009-2017', 2, 'active'),
+('Dr. Richard A Boadu', 'Administrator', 'historical_admin', '/images/board/s8507356-member3.jpg', '2017-2024', 3, 'active'),
+('Mr. Paul Adjei', 'Administrator', 'historical_admin', '/images/board/s8507353-member4.jpg', '2025-Date', 4, 'active');
