@@ -122,7 +122,7 @@ export async function POST(request: NextRequest) {
         params.append('name', body.metadata.donorName);
       }
 
-      const paymentUrl = 'https://paygate.xcelapp.com/v1/main/xcel?code=PMT251212N41UFY52O' //`https://paygate.xcelapp.com/pay/${XCEL_MERCHANT_ID}?${params.toString()}`;
+      const paymentUrl = `https://paygate.xcelapp.com/pay/${XCEL_MERCHANT_ID}?${params.toString()}`;
 
       console.log('[DEBUG] Direct payment link with params:', paymentUrl);
       console.log('========== PAYMENT REQUEST END (DIRECT LINK) ==========\n');
