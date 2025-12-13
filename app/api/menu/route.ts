@@ -12,7 +12,7 @@ export async function GET(request: NextRequest) {
   try {
     // Fetch all menu items including:
     // 1. Pages with show_in_menu = true (parent menu items)
-    // 2. Pages with parent_page_id (child pages for dropdowns)
+    // 2. Pages with parent_page_id AND show_in_menu = true (child pages for dropdowns)
     const menuItemsResult = await query(`
       SELECT
         id,
@@ -25,7 +25,7 @@ export async function GET(request: NextRequest) {
         parent_page_id
       FROM pages
       WHERE is_active = true
-        AND (show_in_menu = true OR parent_page_id IS NOT NULL)
+        AND show_in_menu = true
       ORDER BY menu_order ASC
       LIMIT 50
     `);

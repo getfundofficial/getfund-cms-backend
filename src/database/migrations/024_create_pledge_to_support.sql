@@ -31,10 +31,10 @@ CREATE TABLE IF NOT EXISTS pledge_to_support (
 );
 
 -- Performance indexes
-CREATE INDEX idx_pledge_to_support_email ON pledge_to_support(email);
-CREATE INDEX idx_pledge_to_support_country ON pledge_to_support(country);
-CREATE INDEX idx_pledge_to_support_status ON pledge_to_support(status);
-CREATE INDEX idx_pledge_to_support_created_at ON pledge_to_support(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_pledge_to_support_email ON pledge_to_support(email);
+CREATE INDEX IF NOT EXISTS idx_pledge_to_support_country ON pledge_to_support(country);
+CREATE INDEX IF NOT EXISTS idx_pledge_to_support_status ON pledge_to_support(status);
+CREATE INDEX IF NOT EXISTS idx_pledge_to_support_created_at ON pledge_to_support(created_at DESC);
 
 -- Auto-update timestamp trigger
 CREATE OR REPLACE FUNCTION update_pledge_to_support_timestamp()
@@ -45,6 +45,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
+DROP TRIGGER IF EXISTS update_pledge_to_support_timestamp ON pledge_to_support;
 CREATE TRIGGER update_pledge_to_support_timestamp
   BEFORE UPDATE ON pledge_to_support
   FOR EACH ROW
