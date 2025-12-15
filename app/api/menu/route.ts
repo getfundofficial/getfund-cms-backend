@@ -30,14 +30,17 @@ export async function GET(request: NextRequest) {
       LIMIT 50
     `);
 
-    const allItems = menuItemsResult.rows.map(item => ({
-      id: item.id,
-      slug: item.slug,
-      title: item.title,
-      label: item.menu_label || item.title,
-      order: item.menu_order,
-      parentId: item.parent_page_id,
-    }));
+    const allItems = menuItemsResult.rows
+      // Filter out "SUPPORT US" from menu
+      .filter(item => item.slug !== 'support-us' && item.menu_label !== 'SUPPORT US')
+      .map(item => ({
+        id: item.id,
+        slug: item.slug,
+        title: item.title,
+        label: item.menu_label || item.title,
+        order: item.menu_order,
+        parentId: item.parent_page_id,
+      }));
 
     // Build hierarchical structure: separate parent items and children
     const parentItems = allItems.filter(item => !item.parentId);
