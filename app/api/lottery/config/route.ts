@@ -57,7 +57,12 @@ export async function PUT(request: NextRequest) {
       draw_frequency,
       how_it_works_steps,
       is_active,
-      banner_color
+      banner_color,
+      section_title,
+      section_description,
+      sharing_enabled,
+      share_text,
+      share_hashtags
     } = body;
 
     // Validation
@@ -121,6 +126,26 @@ export async function PUT(request: NextRequest) {
     if (banner_color !== undefined) {
       updateFields.push(`banner_color = $${paramIndex++}`);
       updateValues.push(banner_color);
+    }
+    if (section_title !== undefined) {
+      updateFields.push(`section_title = $${paramIndex++}`);
+      updateValues.push(section_title);
+    }
+    if (section_description !== undefined) {
+      updateFields.push(`section_description = $${paramIndex++}`);
+      updateValues.push(section_description);
+    }
+    if (sharing_enabled !== undefined) {
+      updateFields.push(`sharing_enabled = $${paramIndex++}`);
+      updateValues.push(sharing_enabled);
+    }
+    if (share_text !== undefined) {
+      updateFields.push(`share_text = $${paramIndex++}`);
+      updateValues.push(share_text);
+    }
+    if (share_hashtags !== undefined) {
+      updateFields.push(`share_hashtags = $${paramIndex++}`);
+      updateValues.push(share_hashtags);
     }
 
     if (updateFields.length === 0) {

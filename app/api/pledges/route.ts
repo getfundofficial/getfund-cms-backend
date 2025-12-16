@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { query } from '@/lib/db';
 import { corsResponse, corsOptionsResponse } from '@/lib/cors';
 import { verifyAuth } from '@/lib/auth-middleware';
+import { sendPledgeNotification } from '@/lib/email';
 
 export async function OPTIONS(request: NextRequest) {
   return corsOptionsResponse(request.headers.get('origin'));
@@ -76,6 +77,24 @@ export async function POST(request: NextRequest) {
       address?.trim() || null,
       donation_description.trim()
     ]);
+
+    const pledgeData = {
+      id: result.rows[0].id,
+      first_name: first_name.trim(),
+      last_name: last_name.trim(),
+      email: email.trim().toLowerCase(),
+      phone_country_code: phone_country_code.trim(),
+      phone_number: phone_number.trim(),
+      country: country.trim(),
+      address: address?.trim() || undefined,
+      donation_description: donation_description.trim(),
+      created_at: result.rows[0].created_at
+    };
+
+    // Send email notification to organization (non-blocking)
+    sendPledgeNotification(pledgeData).catch(err => {
+      console.error('Failed to send pledge notification email:', err);
+    });
 
     const response = NextResponse.json({
       success: true,
