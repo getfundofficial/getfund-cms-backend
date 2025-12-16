@@ -60,6 +60,7 @@ export async function PUT(request: NextRequest) {
       banner_color,
       section_title,
       section_description,
+      prize_box_title,
       sharing_enabled,
       share_text,
       share_hashtags
@@ -134,6 +135,10 @@ export async function PUT(request: NextRequest) {
     if (section_description !== undefined) {
       updateFields.push(`section_description = $${paramIndex++}`);
       updateValues.push(section_description);
+    }
+    if (prize_box_title !== undefined) {
+      updateFields.push(`prize_box_title = $${paramIndex++}`);
+      updateValues.push(prize_box_title);
     }
     if (sharing_enabled !== undefined) {
       updateFields.push(`sharing_enabled = $${paramIndex++}`);
