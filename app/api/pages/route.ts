@@ -11,10 +11,30 @@ export async function OPTIONS(request: NextRequest) {
   return corsOptionsResponse(request.headers.get('origin'));
 }
 
+// Helper function to check if a table exists
+async function tableExists(tableName: string): Promise<boolean> {
+  try {
+    const result = await query(`
+      SELECT EXISTS (
+        SELECT FROM information_schema.tables
+        WHERE table_schema = 'public'
+        AND table_name = $1
+      )
+    `, [tableName]);
+    return result.rows[0]?.exists === true;
+  } catch {
+    return false;
+  }
+}
+
 // GET /api/pages - Get all pages (with permission filtering)
 export async function GET(request: NextRequest) {
   try {
     const authResult = await verifyAuth(request);
+
+    // Check if page_layouts table exists
+    const hasPageLayouts = await tableExists('page_layouts');
+    console.log('[Pages API] page_layouts table exists:', hasPageLayouts);
 
     // For authenticated users, return all pages they have permission to see
     if (authResult.authenticated) {
@@ -23,8 +43,59 @@ export async function GET(request: NextRequest) {
 
       // Admins see all pages
       if (userRole === 'admin') {
-        const result = await query(`
-          SELECT
+        let result;
+
+        if (hasPageLayouts) {
+          result = await query(`
+            SELECT
+              p.*,
+              creator.full_name as creator_name,
+              updater.full_name as updater_name,
+              pl.name as layout_name,
+              pl.display_name as layout_display_name,
+              (
+                SELECT COUNT(*)::int
+                FROM page_sections ps
+                WHERE ps.page_id = p.id AND ps.is_active = true
+              ) as section_count
+            FROM pages p
+            LEFT JOIN users creator ON p.created_by = creator.id
+            LEFT JOIN users updater ON p.updated_by = updater.id
+            LEFT JOIN page_layouts pl ON p.layout_id = pl.id
+            ORDER BY p.updated_at DESC
+          `);
+        } else {
+          // Fallback query without page_layouts join
+          result = await query(`
+            SELECT
+              p.*,
+              creator.full_name as creator_name,
+              updater.full_name as updater_name,
+              NULL as layout_name,
+              NULL as layout_display_name,
+              (
+                SELECT COUNT(*)::int
+                FROM page_sections ps
+                WHERE ps.page_id = p.id AND ps.is_active = true
+              ) as section_count
+            FROM pages p
+            LEFT JOIN users creator ON p.created_by = creator.id
+            LEFT JOIN users updater ON p.updated_by = updater.id
+            ORDER BY p.updated_at DESC
+          `);
+        }
+
+        const response = NextResponse.json({ pages: result.rows });
+        corsResponse(response, request.headers.get('origin'));
+        return response;
+      }
+
+      // Non-admins see pages they have permissions for
+      let result;
+
+      if (hasPageLayouts) {
+        result = await query(`
+          SELECT DISTINCT
             p.*,
             creator.full_name as creator_name,
             updater.full_name as updater_name,
@@ -39,36 +110,34 @@ export async function GET(request: NextRequest) {
           LEFT JOIN users creator ON p.created_by = creator.id
           LEFT JOIN users updater ON p.updated_by = updater.id
           LEFT JOIN page_layouts pl ON p.layout_id = pl.id
+          LEFT JOIN page_permissions pp ON pp.page_id = p.id
+          WHERE
+            pp.user_id = $1 OR pp.role = $2
           ORDER BY p.updated_at DESC
-        `);
-
-        const response = NextResponse.json({ pages: result.rows });
-        corsResponse(response, request.headers.get('origin'));
-        return response;
+        `, [userId, userRole]);
+      } else {
+        // Fallback query without page_layouts join
+        result = await query(`
+          SELECT DISTINCT
+            p.*,
+            creator.full_name as creator_name,
+            updater.full_name as updater_name,
+            NULL as layout_name,
+            NULL as layout_display_name,
+            (
+              SELECT COUNT(*)::int
+              FROM page_sections ps
+              WHERE ps.page_id = p.id AND ps.is_active = true
+            ) as section_count
+          FROM pages p
+          LEFT JOIN users creator ON p.created_by = creator.id
+          LEFT JOIN users updater ON p.updated_by = updater.id
+          LEFT JOIN page_permissions pp ON pp.page_id = p.id
+          WHERE
+            pp.user_id = $1 OR pp.role = $2
+          ORDER BY p.updated_at DESC
+        `, [userId, userRole]);
       }
-
-      // Non-admins see pages they have permissions for
-      const result = await query(`
-        SELECT DISTINCT
-          p.*,
-          creator.full_name as creator_name,
-          updater.full_name as updater_name,
-          pl.name as layout_name,
-          pl.display_name as layout_display_name,
-          (
-            SELECT COUNT(*)::int
-            FROM page_sections ps
-            WHERE ps.page_id = p.id AND ps.is_active = true
-          ) as section_count
-        FROM pages p
-        LEFT JOIN users creator ON p.created_by = creator.id
-        LEFT JOIN users updater ON p.updated_by = updater.id
-        LEFT JOIN page_layouts pl ON p.layout_id = pl.id
-        LEFT JOIN page_permissions pp ON pp.page_id = p.id
-        WHERE
-          pp.user_id = $1 OR pp.role = $2
-        ORDER BY p.updated_at DESC
-      `, [userId, userRole]);
 
       const response = NextResponse.json({ pages: result.rows });
       corsResponse(response, request.headers.get('origin'));
@@ -95,8 +164,9 @@ export async function GET(request: NextRequest) {
     return response;
   } catch (error: any) {
     console.error('Error fetching pages:', error);
+    console.error('Error details:', error.message, error.code);
     const errorResponse = NextResponse.json(
-      { error: 'Failed to fetch pages' },
+      { error: 'Failed to fetch pages', details: error.message },
       { status: 500 }
     );
     corsResponse(errorResponse, request.headers.get('origin'));

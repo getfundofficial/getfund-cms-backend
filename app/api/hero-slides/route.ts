@@ -16,6 +16,7 @@ export async function GET(request: NextRequest) {
         id,
         title,
         excerpt,
+        body,
         featured_image_url,
         meta_data,
         published_at,
@@ -31,13 +32,25 @@ export async function GET(request: NextRequest) {
     const slides = result.rows.map((row: any) => {
       const metaData = row.meta_data || {};
 
+      // Parse body content for button and font size data
+      let bodyData: any = {};
+      try {
+        if (row.body) {
+          bodyData = JSON.parse(row.body);
+        }
+      } catch {
+        bodyData = {};
+      }
+
       return {
         id: row.id,
         title: row.title,
         subtitle: row.excerpt || metaData.subtitle || '',
         image_url: toRelativePath(row.featured_image_url || metaData.image_url) || '',
-        link_text: metaData.link_text || metaData.buttonText || '',
-        link_url: metaData.link_url || metaData.buttonLink || '',
+        link_text: bodyData.buttonText || metaData.link_text || metaData.buttonText || '',
+        link_url: bodyData.buttonLink || metaData.link_url || metaData.buttonLink || '',
+        title_font_size: bodyData.titleFontSize || 'medium',
+        subtitle_font_size: bodyData.subtitleFontSize || 'medium',
       };
     });
 
