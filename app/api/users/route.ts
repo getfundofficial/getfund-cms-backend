@@ -3,6 +3,7 @@ import { verifyAuth } from '@/lib/auth-middleware';
 import { query } from '@/lib/db';
 import { getCorsHeaders } from '@/lib/cors';
 import bcrypt from 'bcrypt';
+import { DEFAULT_PERMISSIONS, UserPermissions } from '@/models/User';
 
 // Configure route to allow longer execution time for database wake-up
 export const maxDuration = 180; // 180 seconds (3 minutes)
@@ -26,6 +27,7 @@ export async function GET(request: NextRequest) {
         full_name,
         role,
         is_active,
+        permissions,
         created_at,
         updated_at
       FROM users
@@ -58,7 +60,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { email, full_name, role, password } = body;
+    const { email, full_name, role, password, permissions } = body;
 
     // Validate required fields
     if (!email || !full_name || !role) {
@@ -105,6 +107,9 @@ export async function POST(request: NextRequest) {
     // Hash password
     const passwordHash = await bcrypt.hash(userPassword, 10);
 
+    // Use provided permissions or default based on role
+    const userPermissions: UserPermissions = permissions || DEFAULT_PERMISSIONS[role] || DEFAULT_PERMISSIONS.creator;
+
     // Create user
     const result = await query(`
       INSERT INTO users (
@@ -112,10 +117,11 @@ export async function POST(request: NextRequest) {
         password_hash,
         full_name,
         role,
+        permissions,
         is_active
-      ) VALUES ($1, $2, $3, $4, true)
-      RETURNING id, email, full_name, role, is_active, created_at
-    `, [email, passwordHash, full_name, role]);
+      ) VALUES ($1, $2, $3, $4, $5, true)
+      RETURNING id, email, full_name, role, permissions, is_active, created_at
+    `, [email, passwordHash, full_name, role, JSON.stringify(userPermissions)]);
 
     const newUser = result.rows[0];
 
