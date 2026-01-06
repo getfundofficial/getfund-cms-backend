@@ -38,7 +38,7 @@ export async function sendPledgeNotification(pledge: PledgeData): Promise<boolea
   }
 
   try {
-    const { data, error } = await client.emails.send({
+    const { data, error } = await resend.emails.send({
       from: FROM_EMAIL,
       to: [ORG_EMAIL],
       subject: `New Pledge to Support from ${pledge.first_name} ${pledge.last_name}`,
@@ -157,7 +157,7 @@ export async function sendEmail(options: {
   }
 
   try {
-    const { data, error } = await client.emails.send({
+    const { data, error } = await resend.emails.send({
       from: FROM_EMAIL,
       to: Array.isArray(options.to) ? options.to : [options.to],
       subject: options.subject,
