@@ -1,16 +1,16 @@
 import { Resend } from 'resend';
 
-// Lazy initialization - only create Resend instance when needed
-let resend: Resend | null = null;
+// Lazy initialization to avoid build-time errors when API key is not set
+let resendClient: Resend | null = null;
 
 function getResendClient(): Resend | null {
   if (!process.env.RESEND_API_KEY) {
     return null;
   }
-  if (!resend) {
-    resend = new Resend(process.env.RESEND_API_KEY);
+  if (!resendClient) {
+    resendClient = new Resend(process.env.RESEND_API_KEY);
   }
-  return resend;
+  return resendClient;
 }
 
 // Organization email to receive notifications
@@ -31,8 +31,8 @@ interface PledgeData {
 }
 
 export async function sendPledgeNotification(pledge: PledgeData): Promise<boolean> {
-  const client = getResendClient();
-  if (!client) {
+  const resend = getResendClient();
+  if (!resend) {
     console.log('[Email] Skipping notification - RESEND_API_KEY not configured');
     return false;
   }
@@ -150,8 +150,8 @@ export async function sendEmail(options: {
   html: string;
   text?: string;
 }): Promise<boolean> {
-  const client = getResendClient();
-  if (!client) {
+  const resend = getResendClient();
+  if (!resend) {
     console.log('[Email] Skipping email - RESEND_API_KEY not configured');
     return false;
   }

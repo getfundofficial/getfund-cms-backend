@@ -26,7 +26,13 @@ export async function GET(request: NextRequest) {
       return corsResponse(errorResponse, request.headers.get('origin'));
     }
 
-    const response = NextResponse.json({ config: result.rows[0] });
+    const config = result.rows[0];
+    console.log('[Lottery Config GET] Returning config:', {
+      section_title: config.section_title,
+      section_description: config.section_description,
+      prize_box_title: config.prize_box_title,
+    });
+    const response = NextResponse.json({ config });
     return corsResponse(response, request.headers.get('origin'));
   } catch (error: any) {
     console.error('Error fetching lottery config:', error);
@@ -51,6 +57,14 @@ export async function PUT(request: NextRequest) {
     }
 
     const body = await request.json();
+    console.log('[Lottery Config PUT] Received body:', JSON.stringify({
+      section_title: body.section_title,
+      section_description: body.section_description,
+      prize_box_title: body.prize_box_title,
+      sharing_enabled: body.sharing_enabled,
+      how_it_works_steps_count: body.how_it_works_steps?.length,
+    }));
+
     const {
       prizes,
       next_draw_date,
@@ -172,11 +186,22 @@ export async function PUT(request: NextRequest) {
       RETURNING *
     `;
 
+    console.log('[Lottery Config PUT] Executing SQL:', sql);
+    console.log('[Lottery Config PUT] With values count:', updateValues.length);
+
     const result = await query(sql, updateValues);
+
+    const updatedConfig = result.rows[0];
+    console.log('[Lottery Config PUT] Update result:', JSON.stringify({
+      section_title: updatedConfig.section_title,
+      section_description: updatedConfig.section_description,
+      prize_box_title: updatedConfig.prize_box_title,
+      updated_at: updatedConfig.updated_at,
+    }));
 
     const response = NextResponse.json({
       message: 'Lottery configuration updated successfully',
-      config: result.rows[0]
+      config: updatedConfig
     });
     return corsResponse(response, request.headers.get('origin'));
   } catch (error: any) {

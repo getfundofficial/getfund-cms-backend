@@ -26,6 +26,7 @@ export async function GET(
         full_name,
         role,
         is_active,
+        permissions,
         created_at,
         updated_at
       FROM users
@@ -68,7 +69,7 @@ export async function PUT(
     }
 
     const body = await request.json();
-    const { full_name, role, is_active, password } = body;
+    const { full_name, role, is_active, password, permissions } = body;
 
     // Validate role if provided
     if (role) {
@@ -119,6 +120,12 @@ export async function PUT(
       paramIndex++;
     }
 
+    if (permissions !== undefined) {
+      updates.push(`permissions = $${paramIndex}`);
+      values.push(JSON.stringify(permissions));
+      paramIndex++;
+    }
+
     if (updates.length === 0) {
       return NextResponse.json(
         { error: 'No fields to update' },
@@ -133,7 +140,7 @@ export async function PUT(
       UPDATE users
       SET ${updates.join(', ')}
       WHERE id = $${paramIndex}
-      RETURNING id, email, full_name, role, is_active, created_at, updated_at
+      RETURNING id, email, full_name, role, is_active, permissions, created_at, updated_at
     `, values);
 
     if (result.rows.length === 0) {
