@@ -1,6 +1,17 @@
 import { Resend } from 'resend';
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+// Lazy initialization - only create Resend instance when needed
+let resend: Resend | null = null;
+
+function getResendClient(): Resend | null {
+  if (!process.env.RESEND_API_KEY) {
+    return null;
+  }
+  if (!resend) {
+    resend = new Resend(process.env.RESEND_API_KEY);
+  }
+  return resend;
+}
 
 // Organization email to receive notifications
 const ORG_EMAIL = process.env.ORG_NOTIFICATION_EMAIL || 'info@getfund.org';
@@ -20,14 +31,14 @@ interface PledgeData {
 }
 
 export async function sendPledgeNotification(pledge: PledgeData): Promise<boolean> {
-  // Skip if no API key configured
-  if (!process.env.RESEND_API_KEY) {
+  const client = getResendClient();
+  if (!client) {
     console.log('[Email] Skipping notification - RESEND_API_KEY not configured');
     return false;
   }
 
   try {
-    const { data, error } = await resend.emails.send({
+    const { data, error } = await client.emails.send({
       from: FROM_EMAIL,
       to: [ORG_EMAIL],
       subject: `New Pledge to Support from ${pledge.first_name} ${pledge.last_name}`,
@@ -139,13 +150,14 @@ export async function sendEmail(options: {
   html: string;
   text?: string;
 }): Promise<boolean> {
-  if (!process.env.RESEND_API_KEY) {
+  const client = getResendClient();
+  if (!client) {
     console.log('[Email] Skipping email - RESEND_API_KEY not configured');
     return false;
   }
 
   try {
-    const { data, error } = await resend.emails.send({
+    const { data, error } = await client.emails.send({
       from: FROM_EMAIL,
       to: Array.isArray(options.to) ? options.to : [options.to],
       subject: options.subject,
