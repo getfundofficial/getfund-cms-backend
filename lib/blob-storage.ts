@@ -9,7 +9,7 @@ import fs from 'fs/promises';
 import path from 'path';
 
 const USE_BLOB_STORAGE = process.env.NODE_ENV === 'production' || process.env.USE_BLOB_STORAGE === 'true';
-const LOCAL_UPLOAD_DIR = process.env.UPLOAD_DIR || './uploads';
+const LOCAL_UPLOAD_DIR = process.env.UPLOAD_DIR || './public';
 
 export interface UploadResult {
   url: string;
@@ -89,8 +89,10 @@ export async function uploadFile(
       // Get file stats for size
       const stats = await fs.stat(fullPath);
 
-      // Return local URL (will be proxied in development or served by Next.js)
-      const url = `http://localhost:${process.env.PORT || 5000}/${pathname}`;
+      // Return relative URL that can be proxied in development or served by Next.js
+      // Using the VITE_API_URL or backend base URL if set, otherwise relative path
+      const baseUrl = process.env.PUBLIC_URL || '';
+      const url = baseUrl ? `${baseUrl}/${pathname}` : `/${pathname}`;
 
       return {
         url,
