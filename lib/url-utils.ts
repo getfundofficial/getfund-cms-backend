@@ -3,11 +3,11 @@
  */
 
 /**
- * Convert absolute localhost URLs to production URLs or relative paths
+ * Convert absolute localhost URLs to production URLs
  * In production, converts localhost URLs to the backend's production URL
- * In development, converts to relative paths for proxy
+ * In development, preserves localhost URLs so they work across different ports
  * @param url - The URL to convert (can be absolute or relative)
- * @returns Production URL or relative path
+ * @returns Production URL or the original localhost URL in development
  */
 export function toRelativePath(url: string | null | undefined): string | null {
   if (!url) return null;
@@ -35,8 +35,9 @@ export function toRelativePath(url: string | null | undefined): string | null {
     return `${fullBackendUrl}${path}`;
   }
 
-  // In development, return relative path for proxy
-  return path;
+  // In development, preserve the original localhost URL
+  // This ensures images work when website and backend run on different ports
+  return url;
 }
 
 /**

@@ -18,8 +18,7 @@ function verifyWebhookSignature(
       Buffer.from(signature),
       Buffer.from(expectedSignature)
     );
-  } catch (error) {
-    console.error('Signature verification error:', error);
+  } catch {
     return false;
   }
 }
@@ -37,20 +36,10 @@ export async function POST(request: NextRequest) {
     if (signature && webhookSecret) {
       const isValid = verifyWebhookSignature(rawBody, signature, webhookSecret);
       if (!isValid) {
-        console.error('Invalid webhook signature');
         return NextResponse.json({ error: 'Invalid signature' }, { status: 401 });
       }
     }
 
-    // Log the payment event (redact sensitive data)
-    console.log('Payment webhook received:', {
-      event: body.event,
-      reference: body.data?.reference,
-      status: body.data?.status,
-      timestamp: new Date().toISOString(),
-    });
-
-    // Handle different payment events
     switch (body.event) {
       case 'payment.success':
         await handleSuccessfulPayment(body.data);
@@ -65,14 +54,11 @@ export async function POST(request: NextRequest) {
         break;
 
       default:
-        console.log('Unhandled webhook event:', body.event);
+        break;
     }
 
-    // Always return 200 OK to prevent retries
     return NextResponse.json({ success: true, received: true });
-  } catch (error) {
-    console.error('Webhook processing error:', error);
-    // Still return 200 to prevent webhook retries
+  } catch {
     return NextResponse.json({ success: true, received: true });
   }
 }
@@ -81,9 +67,7 @@ async function handleSuccessfulPayment(data: any) {
   try {
     const { reference, amount, currency, customer, metadata, status } = data;
 
-    // Validate payment data
     if (!reference || !amount || !customer?.email) {
-      console.error('Missing required payment data');
       return;
     }
 
@@ -96,8 +80,6 @@ async function handleSuccessfulPayment(data: any) {
             updated_at = CURRENT_TIMESTAMP
         WHERE payment_reference = $1
       `, [reference]);
-
-      console.log(`Updated campaign donation: ${reference}`);
     }
 
     // 2. Create lottery entry automatically (idempotent with ON CONFLICT)
@@ -127,13 +109,8 @@ async function handleSuccessfulPayment(data: any) {
       metadata?.campaignId || null,
       drawMonth.toISOString().split('T')[0]
     ]);
-
-    console.log(`Created lottery entry for payment: ${reference}`);
-
-    // TODO: Send thank you email to donor
-    // TODO: Generate receipt
-  } catch (error) {
-    console.error('Error handling successful payment:', error);
+  } catch {
+    // Payment processing error
   }
 }
 
@@ -149,13 +126,9 @@ async function handleFailedPayment(data: any) {
             updated_at = CURRENT_TIMESTAMP
         WHERE payment_reference = $1
       `, [reference]);
-
-      console.log(`Updated failed campaign donation: ${reference}`);
     }
-
-    // TODO: Notify donor about failed payment
-  } catch (error) {
-    console.error('Error handling failed payment:', error);
+  } catch {
+    // Failed payment handling error
   }
 }
 
@@ -171,10 +144,8 @@ async function handlePendingPayment(data: any) {
             updated_at = CURRENT_TIMESTAMP
         WHERE payment_reference = $1
       `, [reference]);
-
-      console.log(`Updated pending campaign donation: ${reference}`);
     }
-  } catch (error) {
-    console.error('Error handling pending payment:', error);
+  } catch {
+    // Pending payment handling error
   }
 }

@@ -10,7 +10,56 @@ export async function OPTIONS(request: NextRequest) {
 
 export async function GET(request: NextRequest) {
   try {
-    // Query to fetch all published hero slides, ordered by published_at descending
+    // First, try to get hero slides from the home page's page_content section
+    // This is where HomePageEditor saves them
+    const pageContentResult = await query(
+      `SELECT ps.content
+       FROM page_sections ps
+       JOIN pages p ON ps.page_id = p.id
+       WHERE p.slug = 'home'
+         AND ps.section_key = 'page_content'
+         AND ps.is_active = true
+       LIMIT 1`,
+      []
+    );
+
+    if (pageContentResult.rows.length > 0) {
+      const sectionContent = pageContentResult.rows[0].content;
+      let parsedContent: any = {};
+
+      // Parse the content if it's a string
+      if (typeof sectionContent === 'string') {
+        try {
+          parsedContent = JSON.parse(sectionContent);
+        } catch {
+          parsedContent = {};
+        }
+      } else {
+        parsedContent = sectionContent || {};
+      }
+
+      const heroSlides = parsedContent.heroSlides || [];
+
+      const slides = heroSlides.map((slide: any, index: number) => ({
+        id: index + 1,
+        title: slide.headline || slide.title || '',
+        subtitle: slide.description || slide.subtitle || '',
+        image_url: toRelativePath(slide.image) || '',
+        link_text: slide.ctaText || '',
+        link_url: slide.ctaLink || '',
+        title_font_size: slide.titleFontSize || 'medium',
+        subtitle_font_size: slide.subtitleFontSize || 'medium',
+        blue_box_text: slide.blueBox?.text || slide.blueBoxText || '',
+        blue_box_color: slide.blueBox?.color || slide.blueBoxColor || '#2a3f75',
+        blue_box_opacity: slide.blueBox?.opacity ?? slide.blueBoxOpacity ?? 100,
+      }));
+
+      // Return slides (even if empty array - no fallback)
+      const response = NextResponse.json(slides);
+      corsResponse(response, request.headers.get('origin'));
+      return response;
+    }
+
     const result = await query(
       `SELECT
         id,
@@ -51,14 +100,16 @@ export async function GET(request: NextRequest) {
         link_url: bodyData.buttonLink || metaData.link_url || metaData.buttonLink || '',
         title_font_size: bodyData.titleFontSize || 'medium',
         subtitle_font_size: bodyData.subtitleFontSize || 'medium',
+        blue_box_text: bodyData.blueBoxText || metaData.blueBoxText || '',
+        blue_box_color: bodyData.blueBoxColor || metaData.blueBoxColor || '#2a3f75',
+        blue_box_opacity: bodyData.blueBoxOpacity ?? metaData.blueBoxOpacity ?? 100,
       };
     });
 
     const response = NextResponse.json(slides);
     corsResponse(response, request.headers.get('origin'));
     return response;
-  } catch (error: any) {
-    console.error('Error fetching hero slides:', error);
+  } catch {
     const errorResponse = NextResponse.json(
       { error: 'Failed to fetch hero slides' },
       { status: 500 }
