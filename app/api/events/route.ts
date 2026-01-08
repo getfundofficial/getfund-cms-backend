@@ -90,7 +90,7 @@ export async function POST(request: NextRequest) {
       description: body.description,
       event_date: body.event_date,
       event_type: body.event_type || 'other',
-      created_by: authResult.user?.id ? parseInt(authResult.user.id) : undefined,
+      created_by: authResult.user?.id || undefined,
     });
 
     return NextResponse.json({

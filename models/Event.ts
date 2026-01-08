@@ -8,7 +8,7 @@ export interface CompanyEvent {
   description?: string;
   event_date: string;
   event_type: string;
-  created_by?: number;
+  created_by?: string;
   created_at: Date;
   updated_at: Date;
 }
@@ -18,7 +18,7 @@ export interface CreateEventInput {
   description?: string;
   event_date: string;
   event_type?: string;
-  created_by?: number;
+  created_by?: string;
 }
 
 export interface UpdateEventInput {
