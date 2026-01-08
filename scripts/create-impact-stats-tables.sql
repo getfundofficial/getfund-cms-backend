@@ -11,10 +11,11 @@ CREATE TABLE IF NOT EXISTS impact_stats (
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- Create impact_stats_config table for subtitles
+-- Create impact_stats_config table for titles and subtitles
 CREATE TABLE IF NOT EXISTS impact_stats_config (
   id SERIAL PRIMARY KEY,
   page VARCHAR(50) UNIQUE NOT NULL,
+  title VARCHAR(100) DEFAULT 'Our Impact',
   subtitle VARCHAR(200) DEFAULT '25+ years of giving',
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -35,12 +36,12 @@ INSERT INTO impact_stats (title, value, color, page, order_number) VALUES
   ('Model schools', '[TBD]', 'gold', 'all', 6),
   ('TVET', '[TBD]', 'gold', 'all', 7);
 
--- Insert default subtitle config
-INSERT INTO impact_stats_config (page, subtitle) VALUES
-  ('all', '25+ years of giving'),
-  ('why-fundraising', '25+ years of giving'),
-  ('ways-to-donate', '25+ years of giving');
+-- Insert default config
+INSERT INTO impact_stats_config (page, title, subtitle) VALUES
+  ('all', 'Our Impact', '25+ years of giving'),
+  ('why-fundraising', 'Our Impact', '25+ years of giving'),
+  ('ways-to-donate', 'Our Impact', '25+ years of giving');
 
 -- Add comment
 COMMENT ON TABLE impact_stats IS 'Stores impact statistics displayed on various pages';
-COMMENT ON TABLE impact_stats_config IS 'Stores configuration like subtitles for impact stats sections';
+COMMENT ON TABLE impact_stats_config IS 'Stores configuration like titles and subtitles for impact stats sections';

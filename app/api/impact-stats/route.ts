@@ -16,15 +16,16 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const page = searchParams.get('page');
-    
+
     const stats = await ImpactStat.getAll(page);
-    const subtitle = await ImpactStat.getSubtitle(page || 'all');
-    
+    const config = await ImpactStat.getConfig(page || 'all');
+
     return NextResponse.json({
       success: true,
       data: {
         stats,
-        subtitle,
+        title: config.title,
+        subtitle: config.subtitle,
       },
     }, { headers: corsHeaders });
   } catch (error) {

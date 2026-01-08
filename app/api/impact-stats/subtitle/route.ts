@@ -12,55 +12,78 @@ export async function OPTIONS() {
 }
 
 // GET /api/impact-stats/subtitle?page=why-fundraising
+// Returns both title and subtitle for backwards compatibility
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const page = searchParams.get('page') || 'all';
-    
-    const subtitle = await ImpactStat.getSubtitle(page);
-    
+
+    const config = await ImpactStat.getConfig(page);
+
     return NextResponse.json({
       success: true,
-      data: { subtitle },
+      data: {
+        title: config.title,
+        subtitle: config.subtitle
+      },
     }, { headers: corsHeaders });
   } catch (error) {
-    console.error('Error fetching subtitle:', error);
+    console.error('Error fetching config:', error);
     return NextResponse.json(
-      { success: false, error: 'Failed to fetch subtitle' },
+      { success: false, error: 'Failed to fetch config' },
       { status: 500, headers: corsHeaders }
     );
   }
 }
 
 // PUT /api/impact-stats/subtitle
+// Now supports both title and subtitle updates
 export async function PUT(request: NextRequest) {
   try {
     const body = await request.json();
-    
-    if (!body.page || !body.subtitle) {
+
+    if (!body.page) {
       return NextResponse.json(
-        { success: false, error: 'Missing required fields: page, subtitle' },
+        { success: false, error: 'Missing required field: page' },
         { status: 400, headers: corsHeaders }
       );
     }
-    
-    if (body.subtitle.length > 200) {
+
+    // At least one of title or subtitle must be provided
+    if (!body.title && !body.subtitle) {
+      return NextResponse.json(
+        { success: false, error: 'At least one of title or subtitle must be provided' },
+        { status: 400, headers: corsHeaders }
+      );
+    }
+
+    if (body.title && body.title.length > 100) {
+      return NextResponse.json(
+        { success: false, error: 'Title must be 100 characters or less' },
+        { status: 400, headers: corsHeaders }
+      );
+    }
+
+    if (body.subtitle && body.subtitle.length > 200) {
       return NextResponse.json(
         { success: false, error: 'Subtitle must be 200 characters or less' },
         { status: 400, headers: corsHeaders }
       );
     }
-    
-    const result = await ImpactStat.updateSubtitle(body.page, body.subtitle);
-    
+
+    const result = await ImpactStat.updateConfig(body.page, {
+      title: body.title,
+      subtitle: body.subtitle
+    });
+
     return NextResponse.json({
       success: true,
       data: result,
     }, { headers: corsHeaders });
   } catch (error) {
-    console.error('Error updating subtitle:', error);
+    console.error('Error updating config:', error);
     return NextResponse.json(
-      { success: false, error: 'Failed to update subtitle' },
+      { success: false, error: 'Failed to update config' },
       { status: 500, headers: corsHeaders }
     );
   }

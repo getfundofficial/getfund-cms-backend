@@ -124,37 +124,61 @@ class ImpactStat {
     }
   }
 
-  // Get subtitle for a page
-  static async getSubtitle(page) {
+  // Get config (title and subtitle) for a page
+  static async getConfig(page) {
     try {
       const result = await pool.query(
-        'SELECT subtitle FROM impact_stats_config WHERE page = $1',
+        'SELECT title, subtitle FROM impact_stats_config WHERE page = $1',
         [page]
       );
-      return result.rows[0]?.subtitle || '25+ years of giving';
+      return {
+        title: result.rows[0]?.title || 'Our Impact',
+        subtitle: result.rows[0]?.subtitle || '25+ years of giving'
+      };
     } catch (error) {
-      console.error('Error fetching impact stats subtitle:', error);
-      return '25+ years of giving';
+      console.error('Error fetching impact stats config:', error);
+      return { title: 'Our Impact', subtitle: '25+ years of giving' };
     }
   }
 
-  // Update subtitle for a page
-  static async updateSubtitle(page, subtitle) {
+  // Get subtitle for a page (backwards compatibility)
+  static async getSubtitle(page) {
+    const config = await this.getConfig(page);
+    return config.subtitle;
+  }
+
+  // Get title for a page
+  static async getTitle(page) {
+    const config = await this.getConfig(page);
+    return config.title;
+  }
+
+  // Update config (title and/or subtitle) for a page
+  static async updateConfig(page, { title, subtitle }) {
     try {
       const result = await pool.query(
-        `INSERT INTO impact_stats_config (page, subtitle, updated_at)
-         VALUES ($1, $2, NOW())
+        `INSERT INTO impact_stats_config (page, title, subtitle, updated_at)
+         VALUES ($1, $2, $3, NOW())
          ON CONFLICT (page)
-         DO UPDATE SET subtitle = $2, updated_at = NOW()
+         DO UPDATE SET
+           title = COALESCE($2, impact_stats_config.title),
+           subtitle = COALESCE($3, impact_stats_config.subtitle),
+           updated_at = NOW()
          RETURNING *`,
-        [page, subtitle]
+        [page, title, subtitle]
       );
       return result.rows[0];
     } catch (error) {
-      console.error('Error updating impact stats subtitle:', error);
+      console.error('Error updating impact stats config:', error);
       throw error;
     }
   }
+
+  // Update subtitle for a page (backwards compatibility)
+  static async updateSubtitle(page, subtitle) {
+    return this.updateConfig(page, { subtitle });
+  }
 }
+
 
 module.exports = ImpactStat;
