@@ -1,10 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
 import ImpactStat from '@/models/ImpactStat';
 
+// Disable caching for this route
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'GET, PUT, OPTIONS',
   'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+  'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+  'Pragma': 'no-cache',
+  'Expires': '0',
 };
 
 export async function OPTIONS() {
@@ -12,7 +19,6 @@ export async function OPTIONS() {
 }
 
 // GET /api/impact-stats/subtitle?page=why-fundraising
-// Returns both title and subtitle for backwards compatibility
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
@@ -24,7 +30,7 @@ export async function GET(request: NextRequest) {
       success: true,
       data: {
         title: config.title,
-        subtitle: config.subtitle
+        subtitle: config.subtitle,
       },
     }, { headers: corsHeaders });
   } catch (error) {
@@ -37,7 +43,6 @@ export async function GET(request: NextRequest) {
 }
 
 // PUT /api/impact-stats/subtitle
-// Now supports both title and subtitle updates
 export async function PUT(request: NextRequest) {
   try {
     const body = await request.json();
@@ -49,14 +54,7 @@ export async function PUT(request: NextRequest) {
       );
     }
 
-    // At least one of title or subtitle must be provided
-    if (!body.title && !body.subtitle) {
-      return NextResponse.json(
-        { success: false, error: 'At least one of title or subtitle must be provided' },
-        { status: 400, headers: corsHeaders }
-      );
-    }
-
+    // Validate lengths if provided
     if (body.title && body.title.length > 100) {
       return NextResponse.json(
         { success: false, error: 'Title must be 100 characters or less' },
@@ -71,9 +69,10 @@ export async function PUT(request: NextRequest) {
       );
     }
 
+    // Update the config - pass values directly, let the model handle nulls
     const result = await ImpactStat.updateConfig(body.page, {
-      title: body.title,
-      subtitle: body.subtitle
+      title: body.title || null,
+      subtitle: body.subtitle || null,
     });
 
     return NextResponse.json({
