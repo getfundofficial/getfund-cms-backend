@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { query } from '@/lib/db';
 import { corsResponse, corsOptionsResponse } from '@/lib/cors';
-import { verifyAuth } from '@/lib/auth-middleware';
 
 // Disable caching for this route
 export const dynamic = 'force-dynamic';
@@ -29,7 +28,7 @@ export async function GET(request: NextRequest) {
         phone: '+233 30 266 4061',
         email: 'info@getfund.gov.gh',
         address: 'GETFund House, Accra',
-        button_text: 'GET IN TOUCH WITH FUNDRAISING!',
+        button_text: 'Contact Fundraising Unit',
       }, {
         headers: {
           'Cache-Control': 'no-store, no-cache, must-revalidate',
@@ -59,19 +58,12 @@ export async function GET(request: NextRequest) {
 
 // PUT /api/fundraising-contact - Update fundraising contact info
 export async function PUT(request: NextRequest) {
-  try {
-    // Try to verify auth, but allow if user is logged in (any role)
-    let userId = null;
-    try {
-      const authResult = await verifyAuth(request);
-      if (authResult.authenticated && authResult.user) {
-        userId = authResult.user.id;
-      }
-    } catch (authError) {
-      console.log('Auth check failed, proceeding without user ID');
-    }
+  const origin = request.headers.get('origin');
 
+  try {
     const data = await request.json();
+
+    console.log('Received data:', data);
 
     // Validate required fields
     if (!data.phone || !data.email) {
@@ -79,7 +71,7 @@ export async function PUT(request: NextRequest) {
         { error: 'Phone and email are required' },
         { status: 400 }
       );
-      corsResponse(errorResponse, request.headers.get('origin'));
+      corsResponse(errorResponse, origin);
       return errorResponse;
     }
 
@@ -89,41 +81,60 @@ export async function PUT(request: NextRequest) {
       []
     );
 
+    console.log('Existing records:', existing.rows.length);
+
     let result;
     if (existing.rows.length === 0) {
       // Insert new record
+      console.log('Inserting new record...');
       result = await query(
-        `INSERT INTO fundraising_contact (phone, email, address, button_text, updated_by)
-         VALUES ($1, $2, $3, $4, $5)
+        `INSERT INTO fundraising_contact (phone, email, address, button_text, is_active)
+         VALUES ($1, $2, $3, $4, true)
          RETURNING *`,
-        [data.phone, data.email, data.address || 'GETFund House, Accra', data.button_text || 'GET IN TOUCH WITH FUNDRAISING!', userId]
+        [
+          data.phone,
+          data.email,
+          data.address || 'GETFund House, Accra',
+          data.button_text || 'Contact Fundraising Unit'
+        ]
       );
     } else {
       // Update existing record
+      console.log('Updating existing record...');
       result = await query(
         `UPDATE fundraising_contact
          SET phone = $1,
              email = $2,
              address = $3,
              button_text = $4,
-             updated_at = CURRENT_TIMESTAMP,
-             updated_by = $5
+             updated_at = CURRENT_TIMESTAMP
          WHERE is_active = true
          RETURNING *`,
-        [data.phone, data.email, data.address || 'GETFund House, Accra', data.button_text || 'GET IN TOUCH WITH FUNDRAISING!', userId]
+        [
+          data.phone,
+          data.email,
+          data.address || 'GETFund House, Accra',
+          data.button_text || 'Contact Fundraising Unit'
+        ]
       );
     }
 
-    const response = NextResponse.json({ success: true, data: result.rows[0] });
-    corsResponse(response, request.headers.get('origin'));
+    console.log('Save result:', result.rows[0]);
+
+    const response = NextResponse.json({
+      success: true,
+      data: result.rows[0]
+    });
+    corsResponse(response, origin);
     return response;
   } catch (error: any) {
     console.error('Error updating fundraising contact:', error);
+    console.error('Error stack:', error.stack);
     const errorResponse = NextResponse.json(
       { error: 'Failed to update fundraising contact info', details: error.message },
       { status: 500 }
     );
-    corsResponse(errorResponse, request.headers.get('origin'));
+    corsResponse(errorResponse, origin);
     return errorResponse;
   }
 }
