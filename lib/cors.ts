@@ -11,16 +11,22 @@ const ALLOWED_ORIGINS = [
   // Add your production domains here
   'https://getfund.gov.gh',
   'https://www.getfund.gov.gh',
-  // Vercel production URLs
+  // Vercel production URLs - Website
   'https://getfund-website.vercel.app',
   'https://getfund-website-li8xch4m4-thehansguy-projects.vercel.app',
+  // Vercel production URLs - CMS Frontend
+  'https://getfund-cms-frontend.vercel.app',
+  'https://getfund-cms.vercel.app',
 ];
 
 function isOriginAllowed(origin?: string | null): boolean {
-  if (!origin) return false;
+  if (!origin) return true; // Allow requests without origin (like curl, mobile apps)
 
   // Allow Vercel preview deployments
   if (origin.includes('.vercel.app')) return true;
+
+  // Allow localhost for development
+  if (origin.includes('localhost')) return true;
 
   return ALLOWED_ORIGINS.includes(origin);
 }
