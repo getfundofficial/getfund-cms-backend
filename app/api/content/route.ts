@@ -55,7 +55,7 @@ export async function GET(request: NextRequest) {
       paramIndex++;
     }
 
-    sql += ` ORDER BY c.updated_at DESC`;
+    sql += ` ORDER BY c.published_at DESC NULLS LAST, c.created_at DESC`;
 
     if (limit) {
       sql += ` LIMIT $${paramIndex}`;
