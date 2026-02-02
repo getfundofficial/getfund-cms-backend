@@ -138,7 +138,7 @@ export async function POST(
 
     // Validate section type
     const validTypes = [
-      'text', 'html', 'image', 'gallery', 'video', 'stats', 'hero', 'cta',
+      'text', 'html', 'image', 'gallery', 'stats', 'hero', 'cta',
       'regional_impact', 'page_content', 'map', 'achievements', 'scholarship',
       'project_portfolio', 'resources', 'impact_stories'
     ];

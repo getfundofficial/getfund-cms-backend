@@ -6,7 +6,7 @@ export interface TeamMember {
   id: string;
   name: string;
   title: string;
-  role: 'board_chairman' | 'board_member' | 'management' | 'historical_admin';
+  role: 'board_chairman' | 'board_member' | 'management' | 'historical_admin' | 'deputy_administrator' | 'financial_controller';
   image_url?: string;
   bio?: string;
   date_range?: string;
@@ -99,6 +99,32 @@ class TeamMemberModel {
    */
   async getHistoricalAdmins(): Promise<TeamMember[]> {
     return await this.getActiveByRole('historical_admin');
+  }
+
+  /**
+   * Get deputy administrator
+   */
+  async getDeputyAdministrator(): Promise<TeamMember | null> {
+    const result = await sql`
+      SELECT * FROM team_members
+      WHERE role = 'deputy_administrator' AND status = 'active' AND deleted_at IS NULL
+      ORDER BY created_at DESC
+      LIMIT 1
+    `;
+    return (result[0] as TeamMember) || null;
+  }
+
+  /**
+   * Get financial controller
+   */
+  async getFinancialController(): Promise<TeamMember | null> {
+    const result = await sql`
+      SELECT * FROM team_members
+      WHERE role = 'financial_controller' AND status = 'active' AND deleted_at IS NULL
+      ORDER BY created_at DESC
+      LIMIT 1
+    `;
+    return (result[0] as TeamMember) || null;
   }
 
   /**

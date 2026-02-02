@@ -55,7 +55,7 @@ export async function PUT(
 
     // Validate role if provided
     if (body.role) {
-      const validRoles = ['board_chairman', 'board_member', 'management', 'historical_admin'];
+      const validRoles = ['board_chairman', 'board_member', 'management', 'historical_admin', 'deputy_administrator', 'financial_controller'];
       if (!validRoles.includes(body.role)) {
         return NextResponse.json(
           { success: false, error: `Invalid role. Must be one of: ${validRoles.join(', ')}` },
