@@ -13,7 +13,6 @@ async function runMigrations() {
       rejectUnauthorized: false
     }
   });
-
   const migrationsDir = path.join(__dirname, 'migrations');
   const migrationFiles = fs.readdirSync(migrationsDir).sort();
 
