@@ -52,6 +52,8 @@ export async function PUT(
 ) {
   try {
     const body = await request.json();
+    console.log('[TeamMember PUT] Updating member:', params.id);
+    console.log('[TeamMember PUT] Body:', JSON.stringify(body));
 
     // Validate role if provided
     if (body.role) {
@@ -65,15 +67,23 @@ export async function PUT(
     }
 
     const member = await TeamMember.update(params.id, body);
+    console.log('[TeamMember PUT] Updated member:', JSON.stringify(member));
+
+    if (!member) {
+      return NextResponse.json(
+        { success: false, error: 'Team member not found or update failed' },
+        { status: 404, headers: corsHeaders }
+      );
+    }
 
     return NextResponse.json({
       success: true,
       data: member,
     }, { headers: corsHeaders });
-  } catch (error) {
-    console.error('Error updating team member:', error);
+  } catch (error: any) {
+    console.error('[TeamMember PUT] Error updating team member:', error);
     return NextResponse.json(
-      { success: false, error: 'Failed to update team member' },
+      { success: false, error: error.message || 'Failed to update team member' },
       { status: 500, headers: corsHeaders }
     );
   }
