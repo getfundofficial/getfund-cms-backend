@@ -166,55 +166,37 @@ class TeamMemberModel {
    * Update a team member
    */
   async update(id: string, data: UpdateTeamMemberInput): Promise<TeamMember> {
-    // Build dynamic update query
-    const updates: string[] = [];
-    const values: any[] = [];
-    let paramIndex = 1;
-
-    if (data.name !== undefined) {
-      updates.push(`name = $${paramIndex++}`);
-      values.push(data.name);
-    }
-    if (data.title !== undefined) {
-      updates.push(`title = $${paramIndex++}`);
-      values.push(data.title);
-    }
-    if (data.role !== undefined) {
-      updates.push(`role = $${paramIndex++}`);
-      values.push(data.role);
-    }
-    if (data.image_url !== undefined) {
-      updates.push(`image_url = $${paramIndex++}`);
-      values.push(data.image_url);
-    }
-    if (data.bio !== undefined) {
-      updates.push(`bio = $${paramIndex++}`);
-      values.push(data.bio);
-    }
-    if (data.date_range !== undefined) {
-      updates.push(`date_range = $${paramIndex++}`);
-      values.push(data.date_range);
-    }
-    if (data.display_order !== undefined) {
-      updates.push(`display_order = $${paramIndex++}`);
-      values.push(data.display_order);
-    }
-    if (data.status !== undefined) {
-      updates.push(`status = $${paramIndex++}`);
-      values.push(data.status);
+    // Get existing member first
+    const existing = await this.getById(id);
+    if (!existing) {
+      throw new Error('Team member not found');
     }
 
-    updates.push(`updated_at = CURRENT_TIMESTAMP`);
-    values.push(id);
+    // Merge with existing data
+    const name = data.name !== undefined ? data.name : existing.name;
+    const title = data.title !== undefined ? data.title : existing.title;
+    const role = data.role !== undefined ? data.role : existing.role;
+    const image_url = data.image_url !== undefined ? data.image_url : existing.image_url;
+    const bio = data.bio !== undefined ? data.bio : existing.bio;
+    const date_range = data.date_range !== undefined ? data.date_range : existing.date_range;
+    const display_order = data.display_order !== undefined ? data.display_order : existing.display_order;
+    const status = data.status !== undefined ? data.status : existing.status;
 
-    const query = `
+    const result = await sql`
       UPDATE team_members
-      SET ${updates.join(', ')}
-      WHERE id = $${paramIndex} AND deleted_at IS NULL
+      SET
+        name = ${name},
+        title = ${title},
+        role = ${role},
+        image_url = ${image_url || null},
+        bio = ${bio || null},
+        date_range = ${date_range || null},
+        display_order = ${display_order},
+        status = ${status},
+        updated_at = CURRENT_TIMESTAMP
+      WHERE id = ${id} AND deleted_at IS NULL
       RETURNING *
     `;
-
-    const result = await sql(query, values);
     return result[0] as TeamMember;
   }
 
