@@ -82,7 +82,16 @@ async function handleSuccessfulPayment(data: any) {
       `, [reference]);
     }
 
-    // 2. Create lottery entry automatically (idempotent with ON CONFLICT)
+    // 2. Update impact donation record if it exists
+    await query(`
+      UPDATE impact_donations
+      SET payment_status = 'completed',
+          paid_at = CURRENT_TIMESTAMP,
+          updated_at = CURRENT_TIMESTAMP
+      WHERE payment_reference = $1
+    `, [reference]);
+
+    // 3. Create lottery entry automatically (idempotent with ON CONFLICT)
     const drawMonth = new Date();
     drawMonth.setDate(1); // First day of current month
     drawMonth.setHours(0, 0, 0, 0);
@@ -127,6 +136,14 @@ async function handleFailedPayment(data: any) {
         WHERE payment_reference = $1
       `, [reference]);
     }
+
+    // Update impact donation record if it exists
+    await query(`
+      UPDATE impact_donations
+      SET payment_status = 'failed',
+          updated_at = CURRENT_TIMESTAMP
+      WHERE payment_reference = $1
+    `, [reference]);
   } catch {
     // Failed payment handling error
   }
@@ -145,6 +162,14 @@ async function handlePendingPayment(data: any) {
         WHERE payment_reference = $1
       `, [reference]);
     }
+
+    // Update impact donation record if it exists
+    await query(`
+      UPDATE impact_donations
+      SET payment_status = 'pending',
+          updated_at = CURRENT_TIMESTAMP
+      WHERE payment_reference = $1
+    `, [reference]);
   } catch {
     // Pending payment handling error
   }
