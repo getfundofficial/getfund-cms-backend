@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { query } from '../../../src/database/neon';
 
 const XCEL_API_URL = 'https://api.xcelapp.com';
 const XCEL_MERCHANT_ID = process.env.XCEL_MERCHANT_ID || '';
@@ -23,6 +24,10 @@ interface PaymentRequest {
   metadata?: {
     campaignTitle?: string;
     donorName?: string;
+    campaignId?: string;
+    campaignSlug?: string;
+    donationType?: 'impact' | 'campaign' | 'general';
+    donationDescription?: string;
   };
 }
 
@@ -79,9 +84,49 @@ export async function POST(request: NextRequest) {
     // TEST MODE - Skip Xcel API and return mock success
     if (USE_TEST_MODE) {
       console.log('[DEBUG] TEST MODE ACTIVE - Bypassing Xcel API');
-      const mockPaymentUrl = `${process.env.NEXT_PUBLIC_WEBSITE_URL || 'https://getfund-website.vercel.app'}/payment/test-success?reference=${body.reference}&amount=${body.amount}`;
+      const websiteUrl = process.env.NEXT_PUBLIC_WEBSITE_URL || 'https://getfund-website.vercel.app';
+      const mockPaymentUrl = `${websiteUrl}/ways-to-donate?payment=success&reference=${body.reference}&test=true`;
 
       console.log('[DEBUG] Mock payment URL generated:', mockPaymentUrl);
+
+      // Create impact donation record if this is an impact donation (test mode)
+      if (body.metadata?.donationType === 'impact') {
+        try {
+          console.log('[DEBUG] Creating impact donation record (test mode)...');
+          await query(
+            `INSERT INTO impact_donations (
+              donation_type,
+              donation_description,
+              payment_reference,
+              amount,
+              currency,
+              payment_status,
+              donor_email,
+              donor_phone,
+              donor_name,
+              payment_method,
+              metadata
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
+            [
+              body.metadata?.campaignTitle || 'Impact Donation',
+              body.metadata?.donationDescription || body.description,
+              body.reference,
+              body.amount,
+              body.currency,
+              'pending',
+              body.customerEmail,
+              body.customerPhone || null,
+              body.metadata?.donorName || null,
+              body.paymentMethod,
+              JSON.stringify({ test_mode: true }),
+            ]
+          );
+          console.log('[DEBUG] Impact donation record created successfully (test mode)');
+        } catch (dbError) {
+          console.error('[DEBUG] Failed to create impact donation record:', dbError);
+        }
+      }
+
       console.log('========== PAYMENT REQUEST END (TEST MODE SUCCESS) ==========\n');
 
       return NextResponse.json({
@@ -122,6 +167,10 @@ export async function POST(request: NextRequest) {
 
     console.log('[DEBUG] API credentials validated successfully');
 
+    // Get website URL from environment
+    const websiteUrl = process.env.NEXT_PUBLIC_WEBSITE_URL || 'https://getfund-website.vercel.app';
+    const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'https://getfund-cms-backend.vercel.app';
+
     // Initialize payment with Xcel Checkout URL API
     const paymentPayload = {
       amount: body.amount.toString(),
@@ -133,8 +182,8 @@ export async function POST(request: NextRequest) {
       description: body.description || 'Donation to GETFUND',
       channel: 'WEB',
       metadata: body.metadata || {},
-      redirect_url: `${process.env.NEXT_PUBLIC_WEBSITE_URL || 'https://getfund-website.vercel.app'}/payment/callback`,
-      webhook_url: 'https://getfund-cms-backend.vercel.app/api/payments/webhook',
+      redirect_url: `${websiteUrl}/ways-to-donate?payment=success&reference=${body.reference}`,
+      webhook_url: `${backendUrl}/api/payments/webhook`,
       customTxn: {
         editAmt: false, // Prevent users from changing the donation amount
         minAmt: parseFloat(body.amount.toString()),
@@ -251,6 +300,48 @@ export async function POST(request: NextRequest) {
     }
 
     console.log('[DEBUG] Constructed payment URL:', fullPaymentUrl);
+
+    // Create impact donation record if this is an impact donation
+    if (body.metadata?.donationType === 'impact') {
+      try {
+        console.log('[DEBUG] Creating impact donation record...');
+        await query(
+          `INSERT INTO impact_donations (
+            donation_type,
+            donation_description,
+            payment_reference,
+            amount,
+            currency,
+            payment_status,
+            donor_email,
+            donor_phone,
+            donor_name,
+            payment_method,
+            metadata
+          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
+          [
+            body.metadata?.campaignTitle || 'Impact Donation',
+            body.metadata?.donationDescription || body.description,
+            body.reference,
+            body.amount,
+            body.currency,
+            'pending',
+            body.customerEmail,
+            body.customerPhone || null,
+            body.metadata?.donorName || null,
+            body.paymentMethod,
+            JSON.stringify({
+              payment_code: data.data?.payment_code,
+              transaction_id: data.data?.transaction_id,
+            }),
+          ]
+        );
+        console.log('[DEBUG] Impact donation record created successfully');
+      } catch (dbError) {
+        console.error('[DEBUG] Failed to create impact donation record:', dbError);
+        // Don't fail the payment, just log the error
+      }
+    }
 
     return NextResponse.json({
       success: true,
