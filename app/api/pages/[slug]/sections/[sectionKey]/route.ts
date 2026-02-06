@@ -134,6 +134,15 @@ export async function PUT(
       order_index,
     } = body;
 
+    console.log('[Sections PUT] Received content for update:', JSON.stringify(content, null, 2));
+    if (content?.donationOptions) {
+      console.log('[Sections PUT] Donation options:', content.donationOptions.map((opt: any, i: number) => ({
+        index: i,
+        title: opt.title,
+        image: opt.image
+      })));
+    }
+
     // Create revision before updating
     if (content !== undefined) {
       // Get current version number

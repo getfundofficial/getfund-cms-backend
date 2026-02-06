@@ -28,6 +28,9 @@ interface PaymentRequest {
     campaignSlug?: string;
     donationType?: 'impact' | 'campaign' | 'general';
     donationDescription?: string;
+    donationFrequency?: 'one-time' | 'daily' | 'weekly' | 'monthly' | 'yearly';
+    donationReason?: string;
+    donorCategory?: 'Individual' | 'Corporate' | 'GETFund Beneficiary';
   };
 }
 
@@ -89,42 +92,53 @@ export async function POST(request: NextRequest) {
 
       console.log('[DEBUG] Mock payment URL generated:', mockPaymentUrl);
 
-      // Create impact donation record if this is an impact donation (test mode)
-      if (body.metadata?.donationType === 'impact') {
-        try {
-          console.log('[DEBUG] Creating impact donation record (test mode)...');
-          await query(
-            `INSERT INTO impact_donations (
-              donation_type,
-              donation_description,
-              payment_reference,
-              amount,
-              currency,
-              payment_status,
-              donor_email,
-              donor_phone,
-              donor_name,
-              payment_method,
-              metadata
-            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
-            [
-              body.metadata?.campaignTitle || 'Impact Donation',
-              body.metadata?.donationDescription || body.description,
-              body.reference,
-              body.amount,
-              body.currency,
-              'pending',
-              body.customerEmail,
-              body.customerPhone || null,
-              body.metadata?.donorName || null,
-              body.paymentMethod,
-              JSON.stringify({ test_mode: true }),
-            ]
-          );
-          console.log('[DEBUG] Impact donation record created successfully (test mode)');
-        } catch (dbError) {
-          console.error('[DEBUG] Failed to create impact donation record:', dbError);
-        }
+      // Create donation record for ALL donations (test mode)
+      try {
+        console.log('[DEBUG] Creating donation record (test mode)...');
+        await query(
+          `INSERT INTO donations (
+            donation_type,
+            donation_category,
+            donation_description,
+            donation_reason,
+            donation_frequency,
+            payment_reference,
+            amount,
+            currency,
+            payment_status,
+            donor_email,
+            donor_phone,
+            donor_name,
+            donor_type,
+            payment_method,
+            campaign_id,
+            campaign_slug,
+            metadata,
+            created_at
+          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, NOW())`,
+          [
+            body.metadata?.donationType || 'general',
+            body.metadata?.campaignTitle || 'General Donation',
+            body.metadata?.donationDescription || body.description,
+            body.metadata?.donationReason || null,
+            body.metadata?.donationFrequency || 'one-time',
+            body.reference,
+            body.amount,
+            body.currency,
+            'pending',
+            body.customerEmail,
+            body.customerPhone || null,
+            body.metadata?.donorName || null,
+            body.metadata?.donorCategory || 'Individual',
+            body.paymentMethod,
+            body.metadata?.campaignId || null,
+            body.metadata?.campaignSlug || null,
+            JSON.stringify({ test_mode: true }),
+          ]
+        );
+        console.log('[DEBUG] Donation record created successfully (test mode)');
+      } catch (dbError) {
+        console.error('[DEBUG] Failed to create donation record:', dbError);
       }
 
       console.log('========== PAYMENT REQUEST END (TEST MODE SUCCESS) ==========\n');
@@ -301,46 +315,57 @@ export async function POST(request: NextRequest) {
 
     console.log('[DEBUG] Constructed payment URL:', fullPaymentUrl);
 
-    // Create impact donation record if this is an impact donation
-    if (body.metadata?.donationType === 'impact') {
-      try {
-        console.log('[DEBUG] Creating impact donation record...');
-        await query(
-          `INSERT INTO impact_donations (
-            donation_type,
-            donation_description,
-            payment_reference,
-            amount,
-            currency,
-            payment_status,
-            donor_email,
-            donor_phone,
-            donor_name,
-            payment_method,
-            metadata
-          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
-          [
-            body.metadata?.campaignTitle || 'Impact Donation',
-            body.metadata?.donationDescription || body.description,
-            body.reference,
-            body.amount,
-            body.currency,
-            'pending',
-            body.customerEmail,
-            body.customerPhone || null,
-            body.metadata?.donorName || null,
-            body.paymentMethod,
-            JSON.stringify({
-              payment_code: data.data?.payment_code,
-              transaction_id: data.data?.transaction_id,
-            }),
-          ]
-        );
-        console.log('[DEBUG] Impact donation record created successfully');
-      } catch (dbError) {
-        console.error('[DEBUG] Failed to create impact donation record:', dbError);
-        // Don't fail the payment, just log the error
-      }
+    // Create donation record for ALL donations
+    try {
+      console.log('[DEBUG] Creating donation record...');
+      await query(
+        `INSERT INTO donations (
+          donation_type,
+          donation_category,
+          donation_description,
+          donation_reason,
+          donation_frequency,
+          payment_reference,
+          amount,
+          currency,
+          payment_status,
+          donor_email,
+          donor_phone,
+          donor_name,
+          donor_type,
+          payment_method,
+          campaign_id,
+          campaign_slug,
+          metadata,
+          created_at
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, NOW())`,
+        [
+          body.metadata?.donationType || 'general',
+          body.metadata?.campaignTitle || 'General Donation',
+          body.metadata?.donationDescription || body.description,
+          body.metadata?.donationReason || null,
+          body.metadata?.donationFrequency || 'one-time',
+          body.reference,
+          body.amount,
+          body.currency,
+          'pending',
+          body.customerEmail,
+          body.customerPhone || null,
+          body.metadata?.donorName || null,
+          body.metadata?.donorCategory || 'Individual',
+          body.paymentMethod,
+          body.metadata?.campaignId || null,
+          body.metadata?.campaignSlug || null,
+          JSON.stringify({
+            payment_code: data.data?.payment_code,
+            transaction_id: data.data?.transaction_id,
+          }),
+        ]
+      );
+      console.log('[DEBUG] Donation record created successfully');
+    } catch (dbError) {
+      console.error('[DEBUG] Failed to create donation record:', dbError);
+      // Don't fail the payment, just log the error
     }
 
     return NextResponse.json({
