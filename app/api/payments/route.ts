@@ -489,6 +489,38 @@ export async function GET(request: NextRequest) {
       currency: data.currency,
       paidAt: data.paid_at,
     });
+
+    // Update donation status in database based on payment status
+    const paymentStatus = data.status?.toLowerCase();
+    if (paymentStatus === 'success' || paymentStatus === 'successful' || paymentStatus === 'completed') {
+      console.log('[DEBUG] Updating donation to completed status...');
+      try {
+        await query(`
+          UPDATE donations
+          SET payment_status = 'completed',
+              paid_at = COALESCE(paid_at, CURRENT_TIMESTAMP),
+              updated_at = CURRENT_TIMESTAMP
+          WHERE payment_reference = $1 AND payment_status != 'completed'
+        `, [reference]);
+        console.log('[DEBUG] Donation status updated to completed');
+      } catch (dbError) {
+        console.error('[DEBUG] Failed to update donation status:', dbError);
+      }
+    } else if (paymentStatus === 'failed' || paymentStatus === 'cancelled') {
+      console.log('[DEBUG] Updating donation to failed status...');
+      try {
+        await query(`
+          UPDATE donations
+          SET payment_status = 'failed',
+              updated_at = CURRENT_TIMESTAMP
+          WHERE payment_reference = $1 AND payment_status = 'pending'
+        `, [reference]);
+        console.log('[DEBUG] Donation status updated to failed');
+      } catch (dbError) {
+        console.error('[DEBUG] Failed to update donation status:', dbError);
+      }
+    }
+
     console.log('========== PAYMENT VERIFICATION END (SUCCESS) ==========\n');
 
     return NextResponse.json({
