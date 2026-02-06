@@ -127,10 +127,30 @@ export async function GET(
     `, [page.id, authResult.authenticated]);
 
     // Sanitize URLs in sections content to remove localhost references
-    const sanitizedSections = sectionsResult.rows.map(section => ({
-      ...section,
-      content: sanitizeUrls(section.content),
-    }));
+    const sanitizedSections = sectionsResult.rows.map(section => {
+      const sanitizedContent = sanitizeUrls(section.content);
+
+      // Debug logging for ways-to-donate page
+      if (slug === 'ways-to-donate' && section.section_type === 'page_content') {
+        console.log('[Pages GET] ways-to-donate section content:', {
+          raw_donationOptions: section.content?.donationOptions?.map((opt: any, i: number) => ({
+            index: i,
+            title: opt.title,
+            image: opt.image
+          })),
+          sanitized_donationOptions: sanitizedContent?.donationOptions?.map((opt: any, i: number) => ({
+            index: i,
+            title: opt.title,
+            image: opt.image
+          }))
+        });
+      }
+
+      return {
+        ...section,
+        content: sanitizedContent,
+      };
+    });
 
     const response = NextResponse.json({
       page: {
