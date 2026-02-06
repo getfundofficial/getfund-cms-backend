@@ -1,7 +1,4 @@
-import { neon, neonConfig, Pool } from '@neondatabase/serverless';
-
-// Configure Neon for optimal performance
-neonConfig.fetchConnectionCache = true;
+import { neon, Pool } from '@neondatabase/serverless';
 
 // Use Neon serverless driver for queries (recommended for Vercel Edge/Serverless)
 // Note: We don't set a timeout here because AbortSignal.timeout() creates a signal that

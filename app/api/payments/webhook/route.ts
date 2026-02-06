@@ -71,7 +71,16 @@ async function handleSuccessfulPayment(data: any) {
       return;
     }
 
-    // 1. Update campaign donation record if campaign-related
+    // 1. Update the main donations table
+    await query(`
+      UPDATE donations
+      SET payment_status = 'completed',
+          paid_at = CURRENT_TIMESTAMP,
+          updated_at = CURRENT_TIMESTAMP
+      WHERE payment_reference = $1
+    `, [reference]);
+
+    // 2. Update campaign donation record if campaign-related
     if (metadata?.campaignId) {
       await query(`
         UPDATE campaign_donations
@@ -82,7 +91,7 @@ async function handleSuccessfulPayment(data: any) {
       `, [reference]);
     }
 
-    // 2. Update impact donation record if it exists
+    // 3. Update impact donation record if it exists
     await query(`
       UPDATE impact_donations
       SET payment_status = 'completed',
@@ -127,6 +136,14 @@ async function handleFailedPayment(data: any) {
   try {
     const { reference, metadata } = data;
 
+    // Update the main donations table
+    await query(`
+      UPDATE donations
+      SET payment_status = 'failed',
+          updated_at = CURRENT_TIMESTAMP
+      WHERE payment_reference = $1
+    `, [reference]);
+
     // Update campaign donation record if exists
     if (metadata?.campaignId) {
       await query(`
@@ -152,6 +169,14 @@ async function handleFailedPayment(data: any) {
 async function handlePendingPayment(data: any) {
   try {
     const { reference, metadata } = data;
+
+    // Update the main donations table
+    await query(`
+      UPDATE donations
+      SET payment_status = 'pending',
+          updated_at = CURRENT_TIMESTAMP
+      WHERE payment_reference = $1
+    `, [reference]);
 
     // Update campaign donation record if exists
     if (metadata?.campaignId) {

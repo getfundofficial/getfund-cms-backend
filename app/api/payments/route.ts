@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { query } from '../../../src/database/neon';
+import { query } from '@/lib/db';
 
 const XCEL_API_URL = 'https://api.xcelapp.com';
 const XCEL_MERCHANT_ID = process.env.XCEL_MERCHANT_ID || '';
@@ -87,8 +87,8 @@ export async function POST(request: NextRequest) {
     // TEST MODE - Skip Xcel API and return mock success
     if (USE_TEST_MODE) {
       console.log('[DEBUG] TEST MODE ACTIVE - Bypassing Xcel API');
-      const websiteUrl = process.env.NEXT_PUBLIC_WEBSITE_URL || 'https://getfund-website.vercel.app';
-      const mockPaymentUrl = `${websiteUrl}/ways-to-donate?payment=success&reference=${body.reference}&test=true`;
+      const websiteUrl = process.env.NEXT_PUBLIC_WEBSITE_URL || 'https://getfund-website-hq.vercel.app';
+      const mockPaymentUrl = `${websiteUrl}/fundraising/ways-to-donate?payment=success&reference=${body.reference}&test=true`;
 
       console.log('[DEBUG] Mock payment URL generated:', mockPaymentUrl);
 
@@ -182,7 +182,7 @@ export async function POST(request: NextRequest) {
     console.log('[DEBUG] API credentials validated successfully');
 
     // Get website URL from environment
-    const websiteUrl = process.env.NEXT_PUBLIC_WEBSITE_URL || 'https://getfund-website.vercel.app';
+    const websiteUrl = process.env.NEXT_PUBLIC_WEBSITE_URL || 'https://getfund-website-hq.vercel.app';
     const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'https://getfund-cms-backend.vercel.app';
 
     // Initialize payment with Xcel Checkout URL API
@@ -196,7 +196,7 @@ export async function POST(request: NextRequest) {
       description: body.description || 'Donation to GETFUND',
       channel: 'WEB',
       metadata: body.metadata || {},
-      redirect_url: `${websiteUrl}/ways-to-donate?payment=success&reference=${body.reference}`,
+      redirect_url: `${websiteUrl}/fundraising/ways-to-donate?payment=success&reference=${body.reference}`,
       webhook_url: `${backendUrl}/api/payments/webhook`,
       customTxn: {
         editAmt: false, // Prevent users from changing the donation amount

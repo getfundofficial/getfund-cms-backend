@@ -1,7 +1,7 @@
 # Xcel Payment Gateway - Integration Request
 
 **Organization**: GetFund  
-**Website**: https://getfund-website.vercel.app  
+**Website**: https://getfund-website-hq.vercel.app  
 **Purpose**: Process donations via Mobile Money, Cards, and other payment methods
 
 ---
