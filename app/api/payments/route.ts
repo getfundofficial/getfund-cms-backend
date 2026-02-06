@@ -503,6 +503,54 @@ export async function GET(request: NextRequest) {
           WHERE payment_reference = $1 AND payment_status != 'completed'
         `, [reference]);
         console.log('[DEBUG] Donation status updated to completed');
+
+        // Also create lottery entry as fallback (in case webhook didn't fire)
+        // Get donation details and lottery config draw month
+        const [donationResult, lotteryConfig] = await Promise.all([
+          query(`
+            SELECT donor_email, donor_phone, donor_name, amount, currency, campaign_id
+            FROM donations
+            WHERE payment_reference = $1
+            LIMIT 1
+          `, [reference]),
+          query(`
+            SELECT date_trunc('month', next_draw_date)::date as draw_month
+            FROM lottery_config WHERE id = 1
+          `)
+        ]);
+
+        if (donationResult.rows.length > 0) {
+          const donation = donationResult.rows[0];
+          // Use draw_month from lottery config to match the counting query
+          const drawMonth = lotteryConfig.rows.length > 0
+            ? lotteryConfig.rows[0].draw_month
+            : new Date().toISOString().split('T')[0].substring(0, 8) + '01';
+
+          console.log('[DEBUG] Creating lottery entry (verification fallback)...');
+          await query(`
+            INSERT INTO lottery_entries (
+              payment_reference,
+              donation_amount,
+              currency,
+              donor_email,
+              donor_phone,
+              donor_name,
+              campaign_id,
+              draw_month
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+            ON CONFLICT (payment_reference) DO NOTHING
+          `, [
+            reference,
+            donation.amount,
+            donation.currency || 'GHS',
+            donation.donor_email,
+            donation.donor_phone,
+            donation.donor_name,
+            donation.campaign_id,
+            drawMonth
+          ]);
+          console.log('[DEBUG] Lottery entry created/verified');
+        }
       } catch (dbError) {
         console.error('[DEBUG] Failed to update donation status:', dbError);
       }

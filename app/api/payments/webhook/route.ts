@@ -101,9 +101,15 @@ async function handleSuccessfulPayment(data: any) {
     `, [reference]);
 
     // 3. Create lottery entry automatically (idempotent with ON CONFLICT)
-    const drawMonth = new Date();
-    drawMonth.setDate(1); // First day of current month
-    drawMonth.setHours(0, 0, 0, 0);
+    // Get the draw_month from lottery config (matches the next_draw_date month)
+    const lotteryConfig = await query(`
+      SELECT date_trunc('month', next_draw_date)::date as draw_month
+      FROM lottery_config WHERE id = 1
+    `);
+
+    const drawMonth = lotteryConfig.rows.length > 0
+      ? lotteryConfig.rows[0].draw_month
+      : new Date().toISOString().split('T')[0].substring(0, 8) + '01'; // Fallback to first of current month
 
     await query(`
       INSERT INTO lottery_entries (
@@ -125,7 +131,7 @@ async function handleSuccessfulPayment(data: any) {
       customer.phone || null,
       metadata?.donorName || customer.name || null,
       metadata?.campaignId || null,
-      drawMonth.toISOString().split('T')[0]
+      drawMonth
     ]);
   } catch {
     // Payment processing error
