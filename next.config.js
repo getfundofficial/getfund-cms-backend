@@ -8,7 +8,7 @@ const nextConfig = {
   experimental: {
     // Note: This is for Next.js 13/14. For Next.js 15+, maxDuration is set per route
     serverActions: {
-      bodySizeLimit: '10mb',
+      bodySizeLimit: '100mb',
     },
   },
 };
