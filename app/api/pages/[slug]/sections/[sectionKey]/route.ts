@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { query } from '@/lib/db';
 import { corsResponse, corsOptionsResponse } from '@/lib/cors';
 import { verifyAuth } from '@/lib/auth-middleware';
+import { AuditLogModel } from '@/models/AuditLog';
 
 // Handle CORS preflight
 export async function OPTIONS(request: NextRequest) {
@@ -193,9 +194,34 @@ export async function PUT(
       sectionId,
     ]);
 
+    const updatedSection = result.rows[0];
+
+    // Log section update in audit trail
+    const ipAddress = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown';
+    const userAgent = request.headers.get('user-agent') || '';
+
+    const changes: any = {
+      page_slug: slug,
+      section_key: sectionKey
+    };
+    if (title !== undefined) changes.title = title;
+    if (content !== undefined) changes.content_updated = true;
+    if (is_active !== undefined) changes.is_active = is_active;
+    if (order_index !== undefined) changes.order_index = order_index;
+
+    await AuditLogModel.create({
+      user_id: user.id,
+      action: 'update',
+      entity_type: 'page_section',
+      entity_id: sectionId,
+      changes: changes,
+      ip_address: ipAddress,
+      user_agent: userAgent
+    });
+
     const response = NextResponse.json({
       message: 'Section updated successfully',
-      section: result.rows[0],
+      section: updatedSection,
     });
     corsResponse(response, request.headers.get('origin'));
     return response;
@@ -248,7 +274,7 @@ export async function DELETE(
         JOIN pages p ON ps.page_id = p.id
         WHERE p.slug = $1 AND ps.section_key = $2
       )
-      RETURNING id
+      RETURNING id, section_key, section_type, title
     `, [slug, sectionKey]);
 
     if (result.rows.length === 0) {
@@ -259,6 +285,28 @@ export async function DELETE(
       corsResponse(errorResponse, request.headers.get('origin'));
       return errorResponse;
     }
+
+    const deletedSection = result.rows[0];
+
+    // Log section deletion in audit trail
+    const ipAddress = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown';
+    const userAgent = request.headers.get('user-agent') || '';
+
+    await AuditLogModel.create({
+      user_id: user.id,
+      action: 'delete',
+      entity_type: 'page_section',
+      entity_id: deletedSection.id,
+      changes: {
+        page_slug: slug,
+        section_key: deletedSection.section_key,
+        section_type: deletedSection.section_type,
+        title: deletedSection.title,
+        deleted_by: user.id
+      },
+      ip_address: ipAddress,
+      user_agent: userAgent
+    });
 
     const response = NextResponse.json({
       message: 'Section deleted successfully',

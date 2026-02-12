@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import Partner from '@/models/Partner';
+import { AuditLogModel } from '@/models/AuditLog';
+import { verifyAuth } from '@/lib/auth-middleware';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -70,6 +72,26 @@ export async function POST(request: NextRequest) {
       is_active: body.is_active,
     });
 
+    // Log partner creation in audit trail
+    const authResult = await verifyAuth(request);
+    if (authResult.authenticated) {
+      const ipAddress = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown';
+      const userAgent = request.headers.get('user-agent') || '';
+
+      await AuditLogModel.create({
+        user_id: authResult.user!.id,
+        action: 'create',
+        entity_type: 'partner',
+        entity_id: partner.id,
+        changes: {
+          name: partner.name,
+          logo_url: partner.logo_url
+        },
+        ip_address: ipAddress,
+        user_agent: userAgent
+      });
+    }
+
     return NextResponse.json({
       success: true,
       data: partner,
@@ -99,6 +121,25 @@ export async function PUT(request: NextRequest) {
     }
 
     await Partner.updateOrder(body.orderData);
+
+    // Log partner reorder in audit trail
+    const authResult = await verifyAuth(request);
+    if (authResult.authenticated) {
+      const ipAddress = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown';
+      const userAgent = request.headers.get('user-agent') || '';
+
+      await AuditLogModel.create({
+        user_id: authResult.user!.id,
+        action: 'reorder',
+        entity_type: 'partner',
+        entity_id: 'bulk',
+        changes: {
+          count: body.orderData.length
+        },
+        ip_address: ipAddress,
+        user_agent: userAgent
+      });
+    }
 
     return NextResponse.json({
       success: true,

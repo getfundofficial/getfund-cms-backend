@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { query } from '@/lib/db';
 import { corsResponse, corsOptionsResponse } from '@/lib/cors';
 import { verifyAuth } from '@/lib/auth-middleware';
+import { AuditLogModel } from '@/models/AuditLog';
 
 // Configure route to allow longer execution time for database wake-up
 export const maxDuration = 180; // 180 seconds (3 minutes)
@@ -264,10 +265,31 @@ export async function POST(request: NextRequest) {
       user.id,
     ]);
 
+    const newPage = result.rows[0];
+
+    // Log page creation in audit trail
+    const ipAddress = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown';
+    const userAgent = request.headers.get('user-agent') || '';
+
+    await AuditLogModel.create({
+      user_id: user.id,
+      action: 'create',
+      entity_type: 'page',
+      entity_id: newPage.id,
+      changes: {
+        slug: newPage.slug,
+        title: newPage.title,
+        layout_template: newPage.layout_template,
+        is_active: newPage.is_active
+      },
+      ip_address: ipAddress,
+      user_agent: userAgent
+    });
+
     const response = NextResponse.json(
       {
         message: 'Page created successfully',
-        page: result.rows[0],
+        page: newPage,
       },
       { status: 201 }
     );

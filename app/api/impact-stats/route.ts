@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import ImpactStat from '@/models/ImpactStat';
+import { verifyAuth } from '@/lib/auth-middleware';
+import { AuditLogModel } from '@/models/AuditLog';
 
 // Disable caching for this route
 export const dynamic = 'force-dynamic';
@@ -90,6 +92,28 @@ export async function POST(request: NextRequest) {
       page: body.page,
       order_number: body.order_number || 999,
     });
+
+    // Log impact stat creation in audit trail
+    const authResult = await verifyAuth(request);
+    if (authResult.authenticated) {
+      const ipAddress = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown';
+      const userAgent = request.headers.get('user-agent') || '';
+
+      await AuditLogModel.create({
+        user_id: authResult.user?.id,
+        action: 'create',
+        entity_type: 'impact_stat',
+        entity_id: stat.id,
+        changes: {
+          title: stat.title,
+          value: stat.value,
+          color: stat.color,
+          page: stat.page
+        },
+        ip_address: ipAddress,
+        user_agent: userAgent
+      });
+    }
 
     return NextResponse.json({
       success: true,

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { query } from '@/lib/db';
 import { corsResponse, corsOptionsResponse } from '@/lib/cors';
 import { verifyAuth } from '@/lib/auth-middleware';
+import { AuditLogModel } from '@/models/AuditLog';
 
 // Handle CORS preflight
 export async function OPTIONS(request: NextRequest) {
@@ -192,10 +193,31 @@ export async function POST(
       user.id,
     ]);
 
+    const newSection = result.rows[0];
+
+    // Log section creation in audit trail
+    const ipAddress = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown';
+    const userAgent = request.headers.get('user-agent') || '';
+
+    await AuditLogModel.create({
+      user_id: user.id,
+      action: 'create',
+      entity_type: 'page_section',
+      entity_id: newSection.id,
+      changes: {
+        page_slug: slug,
+        section_key: newSection.section_key,
+        section_type: newSection.section_type,
+        title: newSection.title
+      },
+      ip_address: ipAddress,
+      user_agent: userAgent
+    });
+
     const response = NextResponse.json(
       {
         message: 'Section created successfully',
-        section: result.rows[0],
+        section: newSection,
       },
       { status: 201 }
     );

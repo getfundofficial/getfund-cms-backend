@@ -3,6 +3,7 @@ import { query } from '@/lib/db';
 import { corsResponse, corsOptionsResponse } from '@/lib/cors';
 import { verifyAuth } from '@/lib/auth-middleware';
 import { sanitizeUrls } from '@/lib/url-utils';
+import { AuditLogModel } from '@/models/AuditLog';
 
 // Handle CORS preflight
 export async function OPTIONS(request: NextRequest) {
@@ -188,9 +189,9 @@ export async function PUT(
     const user = authResult.user!;
     const { slug } = params;
 
-    // Check if page exists
+    // Check if page exists and get current data for audit trail
     const pageResult = await query(
-      'SELECT id FROM pages WHERE slug = $1',
+      'SELECT * FROM pages WHERE slug = $1',
       [slug]
     );
 
@@ -203,7 +204,8 @@ export async function PUT(
       return errorResponse;
     }
 
-    const pageId = pageResult.rows[0].id;
+    const oldPage = pageResult.rows[0];
+    const pageId = oldPage.id;
 
     // Check permissions (admin or has edit permission)
     if (user.role !== 'admin') {
@@ -281,9 +283,42 @@ export async function PUT(
       RETURNING *
     `, values);
 
+    const updatedPage = result.rows[0];
+
+    // Log page update in audit trail
+    const ipAddress = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown';
+    const userAgent = request.headers.get('user-agent') || '';
+
+    const changes: any = {};
+    if (title !== undefined && title !== oldPage.title) {
+      changes.title = { from: oldPage.title, to: title };
+    }
+    if (meta_title !== undefined && meta_title !== oldPage.meta_title) {
+      changes.meta_title = { from: oldPage.meta_title, to: meta_title };
+    }
+    if (meta_description !== undefined && meta_description !== oldPage.meta_description) {
+      changes.meta_description = { from: oldPage.meta_description, to: meta_description };
+    }
+    if (layout_template !== undefined && layout_template !== oldPage.layout_template) {
+      changes.layout_template = { from: oldPage.layout_template, to: layout_template };
+    }
+    if (layout_id !== undefined && layout_id !== oldPage.layout_id) {
+      changes.layout_id = { from: oldPage.layout_id, to: layout_id };
+    }
+
+    await AuditLogModel.create({
+      user_id: user.id,
+      action: 'update',
+      entity_type: 'page',
+      entity_id: pageId,
+      changes: changes,
+      ip_address: ipAddress,
+      user_agent: userAgent
+    });
+
     const response = NextResponse.json({
       message: 'Page updated successfully',
-      page: result.rows[0],
+      page: updatedPage,
     });
     corsResponse(response, request.headers.get('origin'));
     return response;
@@ -330,7 +365,7 @@ export async function DELETE(
 
     // Delete page (CASCADE will delete sections, permissions, revisions)
     const result = await query(
-      'DELETE FROM pages WHERE slug = $1 RETURNING id',
+      'DELETE FROM pages WHERE slug = $1 RETURNING id, slug, title',
       [slug]
     );
 
@@ -342,6 +377,26 @@ export async function DELETE(
       corsResponse(errorResponse, request.headers.get('origin'));
       return errorResponse;
     }
+
+    const deletedPage = result.rows[0];
+
+    // Log page deletion in audit trail
+    const ipAddress = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown';
+    const userAgent = request.headers.get('user-agent') || '';
+
+    await AuditLogModel.create({
+      user_id: user.id,
+      action: 'delete',
+      entity_type: 'page',
+      entity_id: deletedPage.id,
+      changes: {
+        slug: deletedPage.slug,
+        title: deletedPage.title,
+        deleted_by: user.id
+      },
+      ip_address: ipAddress,
+      user_agent: userAgent
+    });
 
     const response = NextResponse.json({
       message: 'Page deleted successfully',

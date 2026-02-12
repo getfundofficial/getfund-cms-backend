@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { query } from '@/lib/db';
 import { corsResponse, corsOptionsResponse } from '@/lib/cors';
 import { verifyAuth } from '@/lib/auth-middleware';
+import { AuditLogModel } from '@/models/AuditLog';
 
 export async function OPTIONS(request: NextRequest) {
   return corsOptionsResponse(request.headers.get('origin'));
@@ -185,9 +186,25 @@ export async function PUT(
       return corsResponse(errorResponse, request.headers.get('origin'));
     }
 
+    const updatedCampaign = result.rows[0];
+
+    // Log campaign update in audit trail
+    const ipAddress = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown';
+    const userAgent = request.headers.get('user-agent') || '';
+
+    await AuditLogModel.create({
+      user_id: authResult.user?.id,
+      action: 'update',
+      entity_type: 'campaign',
+      entity_id: updatedCampaign.id,
+      changes: body,
+      ip_address: ipAddress,
+      user_agent: userAgent
+    });
+
     const response = NextResponse.json({
       message: 'Campaign updated successfully',
-      campaign: result.rows[0]
+      campaign: updatedCampaign
     });
     return corsResponse(response, request.headers.get('origin'));
   } catch (error: any) {
@@ -222,7 +239,7 @@ export async function DELETE(
       SET deleted_at = CURRENT_TIMESTAMP,
           updated_by = $1
       WHERE slug = $2 AND deleted_at IS NULL
-      RETURNING id
+      RETURNING id, slug
     `, [authResult.user?.id, slug]);
 
     if (result.rows.length === 0) {
@@ -232,6 +249,22 @@ export async function DELETE(
       );
       return corsResponse(errorResponse, request.headers.get('origin'));
     }
+
+    const deletedCampaign = result.rows[0];
+
+    // Log campaign deletion in audit trail
+    const ipAddress = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown';
+    const userAgent = request.headers.get('user-agent') || '';
+
+    await AuditLogModel.create({
+      user_id: authResult.user?.id,
+      action: 'delete',
+      entity_type: 'campaign',
+      entity_id: deletedCampaign.id,
+      changes: { slug: deletedCampaign.slug },
+      ip_address: ipAddress,
+      user_agent: userAgent
+    });
 
     const response = NextResponse.json({
       message: 'Campaign deleted successfully'

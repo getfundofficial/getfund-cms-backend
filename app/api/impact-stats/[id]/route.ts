@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import ImpactStat from '@/models/ImpactStat';
+import { verifyAuth } from '@/lib/auth-middleware';
+import { AuditLogModel } from '@/models/AuditLog';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -63,14 +65,31 @@ export async function PUT(
     }
     
     const stat = await ImpactStat.update(params.id, body);
-    
+
     if (!stat) {
       return NextResponse.json(
         { success: false, error: 'Impact stat not found' },
         { status: 404, headers: corsHeaders }
       );
     }
-    
+
+    // Log impact stat update in audit trail
+    const authResult = await verifyAuth(request);
+    if (authResult.authenticated) {
+      const ipAddress = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown';
+      const userAgent = request.headers.get('user-agent') || '';
+
+      await AuditLogModel.create({
+        user_id: authResult.user?.id,
+        action: 'update',
+        entity_type: 'impact_stat',
+        entity_id: stat.id,
+        changes: body,
+        ip_address: ipAddress,
+        user_agent: userAgent
+      });
+    }
+
     return NextResponse.json({
       success: true,
       data: stat,
@@ -91,14 +110,31 @@ export async function DELETE(
 ) {
   try {
     const stat = await ImpactStat.delete(params.id);
-    
+
     if (!stat) {
       return NextResponse.json(
         { success: false, error: 'Impact stat not found' },
         { status: 404, headers: corsHeaders }
       );
     }
-    
+
+    // Log impact stat deletion in audit trail
+    const authResult = await verifyAuth(request);
+    if (authResult.authenticated) {
+      const ipAddress = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown';
+      const userAgent = request.headers.get('user-agent') || '';
+
+      await AuditLogModel.create({
+        user_id: authResult.user?.id,
+        action: 'delete',
+        entity_type: 'impact_stat',
+        entity_id: stat.id,
+        changes: { title: stat.title, page: stat.page },
+        ip_address: ipAddress,
+        user_agent: userAgent
+      });
+    }
+
     return NextResponse.json({
       success: true,
       message: 'Impact stat deleted successfully',

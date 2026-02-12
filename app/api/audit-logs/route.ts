@@ -41,6 +41,7 @@ export async function GET(request: NextRequest) {
     const entity_type = searchParams.get('entity_type') || undefined;
     const entity_id = searchParams.get('entity_id') || undefined;
     const action = searchParams.get('action') || undefined;
+    const sort = searchParams.get('sort') as 'asc' | 'desc' || 'desc';
     const limit = parseInt(searchParams.get('limit') || '50');
     const offset = parseInt(searchParams.get('offset') || '0');
 
@@ -49,6 +50,7 @@ export async function GET(request: NextRequest) {
       entity_type,
       entity_id,
       action,
+      sort,
       limit,
       offset,
     });

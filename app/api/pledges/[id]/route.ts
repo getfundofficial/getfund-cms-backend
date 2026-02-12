@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { query } from '@/lib/db';
 import { corsResponse, corsOptionsResponse } from '@/lib/cors';
 import { verifyAuth } from '@/lib/auth-middleware';
+import { AuditLogModel } from '@/models/AuditLog';
 
 export async function OPTIONS(request: NextRequest) {
   return corsOptionsResponse(request.headers.get('origin'));
@@ -179,10 +180,29 @@ export async function PUT(
 
     const result = await query(updateSql, values);
 
+    const updatedPledge = result.rows[0];
+
+    // Log pledge update in audit trail
+    const ipAddress = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown';
+    const userAgent = request.headers.get('user-agent') || '';
+
+    // Track status change specifically
+    const action = status !== undefined ? 'status_change' : 'update';
+
+    await AuditLogModel.create({
+      user_id: authResult.user?.id,
+      action: action,
+      entity_type: 'pledge',
+      entity_id: updatedPledge.id,
+      changes: body,
+      ip_address: ipAddress,
+      user_agent: userAgent
+    });
+
     const response = NextResponse.json({
       success: true,
       message: 'Pledge updated successfully',
-      pledge: result.rows[0]
+      pledge: updatedPledge
     });
     return corsResponse(response, request.headers.get('origin'));
   } catch (error: any) {
@@ -222,6 +242,22 @@ export async function DELETE(
       );
       return corsResponse(errorResponse, request.headers.get('origin'));
     }
+
+    const deletedPledge = result.rows[0];
+
+    // Log pledge deletion in audit trail
+    const ipAddress = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown';
+    const userAgent = request.headers.get('user-agent') || '';
+
+    await AuditLogModel.create({
+      user_id: authResult.user?.id,
+      action: 'delete',
+      entity_type: 'pledge',
+      entity_id: deletedPledge.id,
+      changes: {},
+      ip_address: ipAddress,
+      user_agent: userAgent
+    });
 
     const response = NextResponse.json({
       success: true,

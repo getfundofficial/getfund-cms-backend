@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import Partner from '@/models/Partner';
+import { AuditLogModel } from '@/models/AuditLog';
+import { verifyAuth } from '@/lib/auth-middleware';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -55,6 +57,23 @@ export async function PUT(
 
     const partner = await Partner.update(params.id, body);
 
+    // Log partner update in audit trail
+    const authResult = await verifyAuth(request);
+    if (authResult.authenticated) {
+      const ipAddress = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown';
+      const userAgent = request.headers.get('user-agent') || '';
+
+      await AuditLogModel.create({
+        user_id: authResult.user!.id,
+        action: 'update',
+        entity_type: 'partner',
+        entity_id: params.id,
+        changes: body,
+        ip_address: ipAddress,
+        user_agent: userAgent
+      });
+    }
+
     return NextResponse.json({
       success: true,
       data: partner,
@@ -78,6 +97,25 @@ export async function DELETE(
 ) {
   try {
     await Partner.delete(params.id);
+
+    // Log partner deletion in audit trail
+    const authResult = await verifyAuth(request);
+    if (authResult.authenticated) {
+      const ipAddress = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown';
+      const userAgent = request.headers.get('user-agent') || '';
+
+      await AuditLogModel.create({
+        user_id: authResult.user!.id,
+        action: 'delete',
+        entity_type: 'partner',
+        entity_id: params.id,
+        changes: {
+          deleted_by: authResult.user!.id
+        },
+        ip_address: ipAddress,
+        user_agent: userAgent
+      });
+    }
 
     return NextResponse.json({
       success: true,

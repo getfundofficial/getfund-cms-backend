@@ -4,6 +4,7 @@ import { query } from '@/lib/db';
 import { getCorsHeaders } from '@/lib/cors';
 import bcrypt from 'bcrypt';
 import { DEFAULT_PERMISSIONS, UserPermissions } from '@/models/User';
+import { AuditLogModel } from '@/models/AuditLog';
 
 // Configure route to allow longer execution time for database wake-up
 export const maxDuration = 180; // 180 seconds (3 minutes)
@@ -124,6 +125,30 @@ export async function POST(request: NextRequest) {
     `, [email, passwordHash, full_name, role, JSON.stringify(userPermissions)]);
 
     const newUser = result.rows[0];
+
+    // Log user creation in audit trail
+    try {
+      const ipAddress = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown';
+      const userAgent = request.headers.get('user-agent') || '';
+
+      await AuditLogModel.create({
+        user_id: user.id,
+        action: 'create',
+        entity_type: 'user',
+        entity_id: newUser.id,
+        changes: {
+          email: newUser.email,
+          full_name: newUser.full_name,
+          role: newUser.role,
+          permissions: newUser.permissions
+        },
+        ip_address: ipAddress,
+        user_agent: userAgent
+      });
+    } catch (auditError) {
+      // Log audit error but don't fail user creation
+      console.error('Failed to create audit log for user creation:', auditError);
+    }
 
     return NextResponse.json(
       {

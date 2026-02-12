@@ -3,6 +3,7 @@ import { query } from '@/lib/db';
 import { corsResponse, corsOptionsResponse } from '@/lib/cors';
 import { verifyAuth } from '@/lib/auth-middleware';
 import { sendPledgeNotification } from '@/lib/email';
+import { AuditLogModel } from '@/models/AuditLog';
 
 export async function OPTIONS(request: NextRequest) {
   return corsOptionsResponse(request.headers.get('origin'));
@@ -94,6 +95,23 @@ export async function POST(request: NextRequest) {
     // Send email notification to organization (non-blocking)
     sendPledgeNotification(pledgeData).catch(err => {
       console.error('Failed to send pledge notification email:', err);
+    });
+
+    // Log pledge creation in audit trail (no user_id for public submissions)
+    const ipAddress = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown';
+    const userAgent = request.headers.get('user-agent') || '';
+
+    await AuditLogModel.create({
+      user_id: null,
+      action: 'create',
+      entity_type: 'pledge',
+      entity_id: result.rows[0].id,
+      changes: {
+        email: pledgeData.email,
+        country: pledgeData.country
+      },
+      ip_address: ipAddress,
+      user_agent: userAgent
     });
 
     const response = NextResponse.json({

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { query } from '@/lib/db';
 import { corsResponse, corsOptionsResponse } from '@/lib/cors';
 import { verifyAuth } from '@/lib/auth-middleware';
+import { AuditLogModel } from '@/models/AuditLog';
 
 export async function OPTIONS(request: NextRequest) {
   return corsOptionsResponse(request.headers.get('origin'));
@@ -198,6 +199,20 @@ export async function PUT(request: NextRequest) {
       prize_box_title: updatedConfig.prize_box_title,
       updated_at: updatedConfig.updated_at,
     }));
+
+    // Log lottery config update in audit trail
+    const ipAddress = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown';
+    const userAgent = request.headers.get('user-agent') || '';
+
+    await AuditLogModel.create({
+      user_id: authResult.user?.id,
+      action: 'config_update',
+      entity_type: 'lottery_config',
+      entity_id: updatedConfig.id,
+      changes: body,
+      ip_address: ipAddress,
+      user_agent: userAgent
+    });
 
     const response = NextResponse.json({
       message: 'Lottery configuration updated successfully',

@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import ImpactStat from '@/models/ImpactStat';
+import { verifyAuth } from '@/lib/auth-middleware';
+import { AuditLogModel } from '@/models/AuditLog';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -24,7 +26,24 @@ export async function POST(request: NextRequest) {
     }
     
     await ImpactStat.reorder(body.updates);
-    
+
+    // Log impact stats reorder in audit trail
+    const authResult = await verifyAuth(request);
+    if (authResult.authenticated) {
+      const ipAddress = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown';
+      const userAgent = request.headers.get('user-agent') || '';
+
+      await AuditLogModel.create({
+        user_id: authResult.user?.id,
+        action: 'reorder',
+        entity_type: 'impact_stat',
+        entity_id: null,
+        changes: { updates: body.updates },
+        ip_address: ipAddress,
+        user_agent: userAgent
+      });
+    }
+
     return NextResponse.json({
       success: true,
       message: 'Impact stats reordered successfully',

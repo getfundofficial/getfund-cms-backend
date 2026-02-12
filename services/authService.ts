@@ -10,6 +10,20 @@ export class AuthService {
     // Find user
     const user = await UserModel.findByEmail(email);
     if (!user) {
+      // Log failed login attempt (email not found)
+      await AuditLogModel.create({
+        user_id: 'unknown',
+        action: 'failed_login',
+        entity_type: 'auth',
+        entity_id: email,
+        changes: {
+          reason: 'email_not_found',
+          email: email
+        },
+        ip_address: ipAddress,
+        user_agent: userAgent
+      });
+
       const error: any = new Error('Invalid email or password');
       error.status = 401;
       throw error;
@@ -17,6 +31,20 @@ export class AuthService {
 
     // Check if user is active
     if (!user.is_active) {
+      // Log failed login attempt (account deactivated)
+      await AuditLogModel.create({
+        user_id: user.id,
+        action: 'failed_login',
+        entity_type: 'auth',
+        entity_id: user.id,
+        changes: {
+          reason: 'account_deactivated',
+          email: email
+        },
+        ip_address: ipAddress,
+        user_agent: userAgent
+      });
+
       const error: any = new Error('Account is deactivated');
       error.status = 403;
       throw error;
@@ -25,6 +53,20 @@ export class AuthService {
     // Verify password
     const isValidPassword = await bcrypt.compare(password, user.password_hash || '');
     if (!isValidPassword) {
+      // Log failed login attempt (invalid password)
+      await AuditLogModel.create({
+        user_id: user.id,
+        action: 'failed_login',
+        entity_type: 'auth',
+        entity_id: user.id,
+        changes: {
+          reason: 'invalid_password',
+          email: email
+        },
+        ip_address: ipAddress,
+        user_agent: userAgent
+      });
+
       const error: any = new Error('Invalid email or password');
       error.status = 401;
       throw error;

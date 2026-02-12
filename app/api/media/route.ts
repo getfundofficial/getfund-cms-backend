@@ -3,6 +3,7 @@ import { verifyAuth } from '@/lib/auth-middleware';
 import { query } from '@/lib/db';
 import { getCorsHeaders } from '@/lib/cors';
 import { uploadFile } from '@/lib/blob-storage';
+import { AuditLogModel } from '@/models/AuditLog';
 
 // GET /api/media - Get all media files
 export async function GET(request: NextRequest) {
@@ -119,10 +120,31 @@ export async function POST(request: NextRequest) {
       user.id
     ]);
 
+    const newMedia = result.rows[0];
+
+    // Log media upload in audit trail
+    const ipAddress = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown';
+    const userAgent = request.headers.get('user-agent') || '';
+
+    await AuditLogModel.create({
+      user_id: user.id,
+      action: 'upload',
+      entity_type: 'media',
+      entity_id: newMedia.id,
+      changes: {
+        filename: newMedia.filename,
+        original_name: newMedia.original_name,
+        mime_type: newMedia.mime_type,
+        size_bytes: newMedia.size_bytes
+      },
+      ip_address: ipAddress,
+      user_agent: userAgent
+    });
+
     return NextResponse.json(
       {
         message: 'File uploaded successfully',
-        media: result.rows[0]
+        media: newMedia
       },
       {
         status: 201,

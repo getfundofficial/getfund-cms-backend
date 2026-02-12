@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { query } from '@/lib/db';
 import { corsResponse, corsOptionsResponse } from '@/lib/cors';
 import { verifyAuth } from '@/lib/auth-middleware';
+import { AuditLogModel } from '@/models/AuditLog';
 
 export async function OPTIONS(request: NextRequest) {
   return corsOptionsResponse(request.headers.get('origin'));
@@ -212,10 +213,26 @@ export async function PATCH(request: NextRequest) {
       return corsResponse(errorResponse, request.headers.get('origin'));
     }
 
+    const updatedDonation = result.rows[0];
+
+    // Log donation status change in audit trail
+    const ipAddress = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown';
+    const userAgent = request.headers.get('user-agent') || '';
+
+    await AuditLogModel.create({
+      user_id: authResult.user?.id,
+      action: 'status_change',
+      entity_type: 'donation',
+      entity_id: updatedDonation.id,
+      changes: body,
+      ip_address: ipAddress,
+      user_agent: userAgent
+    });
+
     const response = NextResponse.json({
       success: true,
       message: 'Donation updated successfully',
-      data: result.rows[0]
+      data: updatedDonation
     });
     return corsResponse(response, request.headers.get('origin'));
   } catch (error: any) {

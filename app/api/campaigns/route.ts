@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { query } from '@/lib/db';
 import { corsResponse, corsOptionsResponse } from '@/lib/cors';
 import { verifyAuth } from '@/lib/auth-middleware';
+import { AuditLogModel } from '@/models/AuditLog';
 
 export async function OPTIONS(request: NextRequest) {
   return corsOptionsResponse(request.headers.get('origin'));
@@ -152,8 +153,30 @@ export async function POST(request: NextRequest) {
       authResult.user?.id
     ]);
 
+    const newCampaign = result.rows[0];
+
+    // Log campaign creation in audit trail
+    const ipAddress = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown';
+    const userAgent = request.headers.get('user-agent') || '';
+
+    await AuditLogModel.create({
+      user_id: authResult.user?.id,
+      action: 'create',
+      entity_type: 'campaign',
+      entity_id: newCampaign.id,
+      changes: {
+        title: newCampaign.title,
+        slug: newCampaign.slug,
+        goal_amount: newCampaign.goal_amount,
+        status: newCampaign.status,
+        is_featured: newCampaign.is_featured
+      },
+      ip_address: ipAddress,
+      user_agent: userAgent
+    });
+
     const response = NextResponse.json(
-      { message: 'Campaign created successfully', campaign: result.rows[0] },
+      { message: 'Campaign created successfully', campaign: newCampaign },
       { status: 201 }
     );
     return corsResponse(response, request.headers.get('origin'));

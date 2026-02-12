@@ -18,6 +18,7 @@ export interface AuditLogFilters {
   entity_type?: string;
   entity_id?: string;
   action?: string;
+  sort?: 'asc' | 'desc';
   limit?: number;
   offset?: number;
 }
@@ -55,6 +56,7 @@ export class AuditLogModel {
       entity_type,
       entity_id,
       action,
+      sort = 'desc',
       limit = 50,
       offset = 0,
     } = filters;
@@ -93,6 +95,7 @@ export class AuditLogModel {
     const total = parseInt(countResult.rows[0].total);
 
     // Get paginated logs with user information
+    const orderDirection = sort === 'asc' ? 'ASC' : 'DESC';
     params.push(limit, offset);
     const logsResult = await query(
       `SELECT
@@ -101,7 +104,7 @@ export class AuditLogModel {
        FROM audit_logs al
        LEFT JOIN users u ON al.user_id = u.id
        ${whereClause}
-       ORDER BY al.created_at DESC
+       ORDER BY al.created_at ${orderDirection}
        LIMIT $${paramCount++} OFFSET $${paramCount++}`,
       params
     );

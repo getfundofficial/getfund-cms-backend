@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { query } from '@/lib/db';
 import { corsResponse, corsOptionsResponse } from '@/lib/cors';
 import { verifyAuth } from '@/lib/auth-middleware';
+import { AuditLogModel } from '@/models/AuditLog';
 
 // Handle CORS preflight
 export async function OPTIONS(request: NextRequest) {
@@ -58,9 +59,28 @@ export async function POST(
       return errorResponse;
     }
 
+    const unpublishedPage = result.rows[0];
+
+    // Log page unpublish in audit trail
+    const ipAddress = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown';
+    const userAgent = request.headers.get('user-agent') || '';
+
+    await AuditLogModel.create({
+      user_id: user.id,
+      action: 'unpublish',
+      entity_type: 'page',
+      entity_id: unpublishedPage.id,
+      changes: {
+        slug: slug,
+        is_active: { from: true, to: false }
+      },
+      ip_address: ipAddress,
+      user_agent: userAgent
+    });
+
     const response = NextResponse.json({
       message: 'Page unpublished successfully',
-      page: result.rows[0],
+      page: unpublishedPage,
     });
     corsResponse(response, request.headers.get('origin'));
     return response;

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { verifyAuth } from '@/lib/auth-middleware';
 import { query } from '@/lib/db';
 import { getCorsHeaders } from '@/lib/cors';
+import { AuditLogModel } from '@/models/AuditLog';
 
 // GET /api/media/:id - Get single media file
 export async function GET(
@@ -121,7 +122,7 @@ export async function DELETE(
       UPDATE media
       SET deleted_at = NOW()
       WHERE id = $1 AND deleted_at IS NULL
-      RETURNING id
+      RETURNING id, filename
     `, [params.id]);
 
     if (result.rows.length === 0) {
@@ -130,6 +131,22 @@ export async function DELETE(
         { status: 404, headers: getCorsHeaders(request.headers.get('origin')) }
       );
     }
+
+    const deletedMedia = result.rows[0];
+
+    // Log media deletion in audit trail
+    const ipAddress = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown';
+    const userAgent = request.headers.get('user-agent') || '';
+
+    await AuditLogModel.create({
+      user_id: user.id,
+      action: 'delete',
+      entity_type: 'media',
+      entity_id: deletedMedia.id,
+      changes: { filename: deletedMedia.filename },
+      ip_address: ipAddress,
+      user_agent: userAgent
+    });
 
     return NextResponse.json(
       { message: 'Media deleted successfully' },
