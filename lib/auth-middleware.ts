@@ -6,7 +6,7 @@ interface DecodedToken {
   userId: string;
   email: string;
   role: string;
-  permissions: string[];
+  permissions: Record<string, any> | null;
 }
 
 // Supabase JWT token structure
@@ -42,7 +42,7 @@ export async function verifyAuth(request: NextRequest) {
           id: decoded.userId,
           email: decoded.email,
           role: decoded.role,
-          permissions: decoded.permissions || []
+          permissions: decoded.permissions || null
         }
       };
     } catch (cmsError) {
@@ -67,7 +67,7 @@ export async function verifyAuth(request: NextRequest) {
             id: decoded.sub,
             email: decoded.email || '',
             role: role,
-            permissions: []
+            permissions: null
           }
         };
       } catch (supabaseError) {

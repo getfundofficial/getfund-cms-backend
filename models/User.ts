@@ -11,6 +11,7 @@ export interface UserPermissions {
     impactStats: boolean;
     campaigns: boolean;
     teamMembers: boolean;
+    partners: boolean;
     reviewQueue: boolean;
     approvalQueue: boolean;
   };
@@ -22,6 +23,7 @@ export interface UserPermissions {
     lotteryConfig: boolean;
     lotteryEntries: boolean;
     pledges: boolean;
+    donations: boolean;
   };
   actions: {
     canPublish: boolean;
@@ -36,11 +38,11 @@ export const DEFAULT_PERMISSIONS: Record<string, UserPermissions> = {
     navigation: {
       dashboard: true, news: true, pages: true, heroSlides: true,
       mediaLibrary: true, impactStats: true, campaigns: true, teamMembers: true,
-      reviewQueue: true, approvalQueue: true
+      partners: true, reviewQueue: true, approvalQueue: true
     },
     admin: {
       users: true, menuConfig: true, footerSettings: true, auditLogs: true,
-      lotteryConfig: true, lotteryEntries: true, pledges: true
+      lotteryConfig: true, lotteryEntries: true, pledges: true, donations: true
     },
     actions: { canPublish: true, canReview: true, canDelete: true }
   },
@@ -48,11 +50,11 @@ export const DEFAULT_PERMISSIONS: Record<string, UserPermissions> = {
     navigation: {
       dashboard: true, news: true, pages: true, heroSlides: true,
       mediaLibrary: true, impactStats: true, campaigns: true, teamMembers: true,
-      reviewQueue: false, approvalQueue: false
+      partners: true, reviewQueue: false, approvalQueue: false
     },
     admin: {
       users: false, menuConfig: false, footerSettings: false, auditLogs: false,
-      lotteryConfig: false, lotteryEntries: false, pledges: false
+      lotteryConfig: false, lotteryEntries: false, pledges: false, donations: false
     },
     actions: { canPublish: false, canReview: false, canDelete: false }
   },
@@ -60,11 +62,11 @@ export const DEFAULT_PERMISSIONS: Record<string, UserPermissions> = {
     navigation: {
       dashboard: true, news: true, pages: true, heroSlides: true,
       mediaLibrary: true, impactStats: true, campaigns: true, teamMembers: true,
-      reviewQueue: true, approvalQueue: false
+      partners: true, reviewQueue: true, approvalQueue: false
     },
     admin: {
       users: false, menuConfig: false, footerSettings: false, auditLogs: false,
-      lotteryConfig: false, lotteryEntries: false, pledges: false
+      lotteryConfig: false, lotteryEntries: false, pledges: false, donations: false
     },
     actions: { canPublish: false, canReview: true, canDelete: false }
   },
@@ -72,11 +74,11 @@ export const DEFAULT_PERMISSIONS: Record<string, UserPermissions> = {
     navigation: {
       dashboard: true, news: true, pages: true, heroSlides: true,
       mediaLibrary: true, impactStats: true, campaigns: true, teamMembers: true,
-      reviewQueue: false, approvalQueue: true
+      partners: true, reviewQueue: false, approvalQueue: true
     },
     admin: {
       users: false, menuConfig: false, footerSettings: false, auditLogs: false,
-      lotteryConfig: false, lotteryEntries: false, pledges: false
+      lotteryConfig: false, lotteryEntries: false, pledges: false, donations: false
     },
     actions: { canPublish: true, canReview: false, canDelete: false }
   }

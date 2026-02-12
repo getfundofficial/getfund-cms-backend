@@ -78,7 +78,7 @@ export class AuthService {
         userId: user.id,
         email: user.email,
         role: user.role,
-        permissions: user.permissions || []
+        permissions: user.permissions || null
       },
       jwtConfig.secret,
       { expiresIn: jwtConfig.expiresIn } as SignOptions
@@ -106,7 +106,7 @@ export class AuthService {
         email: user.email,
         full_name: user.full_name,
         role: user.role,
-        permissions: user.permissions || []
+        permissions: user.permissions || null
       },
       accessToken,
       refreshToken
@@ -130,7 +130,7 @@ export class AuthService {
           userId: user.id,
           email: user.email,
           role: user.role,
-          permissions: user.permissions || []
+          permissions: user.permissions || null
         },
         jwtConfig.secret,
         { expiresIn: jwtConfig.expiresIn } as SignOptions
@@ -158,7 +158,7 @@ export class AuthService {
       email: user.email,
       full_name: user.full_name,
       role: user.role,
-      permissions: user.permissions || [],
+      permissions: user.permissions || null,
       is_active: user.is_active,
       created_at: user.created_at
     };
