@@ -69,14 +69,6 @@ export async function PUT(
       );
     }
 
-    // Prevent restricted_admin from editing their own permissions
-    if (user.role === 'restricted_admin' && user.id === params.id) {
-      return NextResponse.json(
-        { error: 'Restricted admins cannot modify their own account' },
-        { status: 403, headers: getCorsHeaders(request.headers.get('origin')) }
-      );
-    }
-
     const body = await request.json();
     const { full_name, role, is_active, password, permissions } = body;
 
@@ -91,13 +83,22 @@ export async function PUT(
       }
     }
 
-    // Prevent restricted_admin from promoting users to full admin
-    if (user.role === 'restricted_admin' && role === 'admin') {
-      return NextResponse.json(
-        { error: 'Restricted admins cannot promote users to full admin' },
-        { status: 403, headers: getCorsHeaders(request.headers.get('origin')) }
-      );
+    // Prevent restricted_admin from escalating privileges
+    if (user.role === 'restricted_admin') {
+      // Cannot promote anyone to full admin
+      if (role === 'admin') {
+        return NextResponse.json(
+          { error: 'Restricted admins cannot promote users to full admin' },
+          { status: 403, headers: getCorsHeaders(request.headers.get('origin')) }
+        );
+      }
     }
+
+    // Determine if role/permissions should be applied
+    // Restricted admins cannot change their own role or permissions (prevents self-escalation)
+    const isSelfEditByRestrictedAdmin = user.role === 'restricted_admin' && user.id === params.id;
+    const effectiveRole = isSelfEditByRestrictedAdmin ? undefined : role;
+    const effectivePermissions = isSelfEditByRestrictedAdmin ? undefined : permissions;
 
     // Prevent admin from deactivating themselves
     if (is_active === false && user.id === params.id) {
@@ -134,9 +135,9 @@ export async function PUT(
       paramIndex++;
     }
 
-    if (role !== undefined) {
+    if (effectiveRole !== undefined) {
       updates.push(`role = $${paramIndex}`);
-      values.push(role);
+      values.push(effectiveRole);
       paramIndex++;
     }
 
@@ -153,9 +154,9 @@ export async function PUT(
       paramIndex++;
     }
 
-    if (permissions !== undefined) {
+    if (effectivePermissions !== undefined) {
       updates.push(`permissions = $${paramIndex}`);
-      values.push(JSON.stringify(permissions));
+      values.push(JSON.stringify(effectivePermissions));
       paramIndex++;
     }
 
@@ -192,7 +193,7 @@ export async function PUT(
     // Track specific change types for detailed audit logs
     const changes: any = {};
 
-    if (role !== undefined && role !== oldUser.role) {
+    if (effectiveRole !== undefined && effectiveRole !== oldUser.role) {
       // Log role change as a specific action
       await AuditLogModel.create({
         user_id: user.id,
@@ -201,15 +202,15 @@ export async function PUT(
         entity_id: params.id,
         changes: {
           old_role: oldUser.role,
-          new_role: role
+          new_role: effectiveRole
         },
         ip_address: ipAddress,
         user_agent: userAgent
       });
-      changes.role = { from: oldUser.role, to: role };
+      changes.role = { from: oldUser.role, to: effectiveRole };
     }
 
-    if (permissions !== undefined && JSON.stringify(permissions) !== JSON.stringify(oldUser.permissions)) {
+    if (effectivePermissions !== undefined && JSON.stringify(effectivePermissions) !== JSON.stringify(oldUser.permissions)) {
       // Log permission change as a specific action
       await AuditLogModel.create({
         user_id: user.id,
@@ -218,12 +219,12 @@ export async function PUT(
         entity_id: params.id,
         changes: {
           old_permissions: oldUser.permissions,
-          new_permissions: permissions
+          new_permissions: effectivePermissions
         },
         ip_address: ipAddress,
         user_agent: userAgent
       });
-      changes.permissions = { from: oldUser.permissions, to: permissions };
+      changes.permissions = { from: oldUser.permissions, to: effectivePermissions };
     }
 
     if (password) {
