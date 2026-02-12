@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { MenuItemModel, CreateMenuItemInput } from '@/models/MenuItem';
 import { corsResponse, corsOptionsResponse } from '@/lib/cors';
-import { verifyAuth } from '@/lib/auth-middleware';
+import { verifyAuth, isAdminRole } from '@/lib/auth-middleware';
 import { AuditLogModel } from '@/models/AuditLog';
 
 // Handle CORS preflight
@@ -19,7 +19,7 @@ export async function GET(request: NextRequest) {
     if (includeInactive) {
       // Verify admin for getting inactive items
       const authResult = await verifyAuth(request);
-      if (!authResult.authenticated || authResult.user?.role !== 'admin') {
+      if (!authResult.authenticated || !isAdminRole(authResult.user?.role)) {
         const errorResponse = NextResponse.json(
           { error: 'Unauthorized - Admin access required' },
           { status: 403 }
@@ -51,7 +51,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const authResult = await verifyAuth(request);
-    if (!authResult.authenticated || authResult.user?.role !== 'admin') {
+    if (!authResult.authenticated || !isAdminRole(authResult.user?.role)) {
       const errorResponse = NextResponse.json(
         { error: 'Unauthorized - Admin access required' },
         { status: 403 }

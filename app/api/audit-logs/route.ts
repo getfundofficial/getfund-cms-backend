@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { corsResponse, corsOptionsResponse } from '@/lib/cors';
-import { verifyAuth } from '@/lib/auth-middleware';
+import { verifyAuth, isAdminRole } from '@/lib/auth-middleware';
 import { AuditLogModel } from '@/models/AuditLog';
 
 // Configure route to allow longer execution time for database wake-up
@@ -27,7 +27,7 @@ export async function GET(request: NextRequest) {
     const user = authResult.user!;
 
     // Only admins can view audit logs
-    if (user.role !== 'admin') {
+    if (!isAdminRole(user.role)) {
       const errorResponse = NextResponse.json(
         { error: 'Forbidden - Admin access required' },
         { status: 403 }

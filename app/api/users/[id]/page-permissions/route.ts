@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { verifyAuth } from '@/lib/auth-middleware';
+import { verifyAuth, isAdminRole } from '@/lib/auth-middleware';
 import { query } from '@/lib/db';
 import { getCorsHeaders } from '@/lib/cors';
 
@@ -11,7 +11,7 @@ export async function GET(
   try {
     const { user } = await verifyAuth(request);
 
-    if (!user || user.role !== 'admin') {
+    if (!user || !isAdminRole(user.role)) {
       return NextResponse.json(
         { error: 'Forbidden - Admin access required' },
         { status: 403, headers: getCorsHeaders(request.headers.get('origin')) }
@@ -64,7 +64,7 @@ export async function PUT(
   try {
     const { user } = await verifyAuth(request);
 
-    if (!user || user.role !== 'admin') {
+    if (!user || !isAdminRole(user.role)) {
       return NextResponse.json(
         { error: 'Forbidden - Admin access required' },
         { status: 403, headers: getCorsHeaders(request.headers.get('origin')) }

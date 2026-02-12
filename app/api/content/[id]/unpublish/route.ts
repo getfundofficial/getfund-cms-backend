@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { query } from '@/lib/db';
 import { corsResponse, corsOptionsResponse } from '@/lib/cors';
-import { verifyAuth } from '@/lib/auth-middleware';
+import { verifyAuth, isAdminRole } from '@/lib/auth-middleware';
 
 // Handle CORS preflight
 export async function OPTIONS(request: NextRequest) {
@@ -25,7 +25,7 @@ export async function POST(
     }
 
     // Only admin can unpublish
-    if (authResult.user.role !== 'admin') {
+    if (!isAdminRole(authResult.user.role)) {
       const errorResponse = NextResponse.json(
         { error: 'Only administrators can unpublish content' },
         { status: 403 }

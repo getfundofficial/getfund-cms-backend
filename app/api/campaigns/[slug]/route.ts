@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { query } from '@/lib/db';
 import { corsResponse, corsOptionsResponse } from '@/lib/cors';
-import { verifyAuth } from '@/lib/auth-middleware';
+import { verifyAuth, isAdminRole } from '@/lib/auth-middleware';
 import { AuditLogModel } from '@/models/AuditLog';
 
 export async function OPTIONS(request: NextRequest) {
@@ -65,7 +65,7 @@ export async function PUT(
 ) {
   try {
     const authResult = await verifyAuth(request);
-    if (!authResult.authenticated || authResult.user?.role !== 'admin') {
+    if (!authResult.authenticated || !isAdminRole(authResult.user?.role)) {
       const errorResponse = NextResponse.json(
         { error: 'Unauthorized' },
         { status: 401 }
@@ -224,7 +224,7 @@ export async function DELETE(
 ) {
   try {
     const authResult = await verifyAuth(request);
-    if (!authResult.authenticated || authResult.user?.role !== 'admin') {
+    if (!authResult.authenticated || !isAdminRole(authResult.user?.role)) {
       const errorResponse = NextResponse.json(
         { error: 'Unauthorized' },
         { status: 401 }

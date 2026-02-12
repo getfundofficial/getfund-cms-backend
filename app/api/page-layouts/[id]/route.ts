@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { query } from '@/lib/db';
-import { verifyAuth } from '@/lib/auth-middleware';
+import { verifyAuth, isAdminRole } from '@/lib/auth-middleware';
 
 // Configure route to allow longer execution time for database wake-up
 export const maxDuration = 180;
@@ -59,7 +59,7 @@ export async function PUT(
 ) {
   try {
     const authResult = await verifyAuth(request);
-    if (!authResult.authenticated || authResult.user?.role !== 'admin') {
+    if (!authResult.authenticated || !isAdminRole(authResult.user?.role)) {
       return NextResponse.json(
         { success: false, error: 'Unauthorized - Admin access required' },
         { status: 403 }
@@ -143,7 +143,7 @@ export async function DELETE(
 ) {
   try {
     const authResult = await verifyAuth(request);
-    if (!authResult.authenticated || authResult.user?.role !== 'admin') {
+    if (!authResult.authenticated || !isAdminRole(authResult.user?.role)) {
       return NextResponse.json(
         { success: false, error: 'Unauthorized - Admin access required' },
         { status: 403 }

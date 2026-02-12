@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { verifyAuth } from '@/lib/auth-middleware';
+import { verifyAuth, isAdminRole } from '@/lib/auth-middleware';
 import { query } from '@/lib/db';
 import { getCorsHeaders } from '@/lib/cors';
 import bcrypt from 'bcrypt';
@@ -13,7 +13,7 @@ export async function GET(
   try {
     const { user } = await verifyAuth(request);
 
-    if (!user || user.role !== 'admin') {
+    if (!user || !isAdminRole(user.role)) {
       return NextResponse.json(
         { error: 'Forbidden - Admin access required' },
         { status: 403, headers: getCorsHeaders(request.headers.get('origin')) }
@@ -62,9 +62,17 @@ export async function PUT(
   try {
     const { user } = await verifyAuth(request);
 
-    if (!user || user.role !== 'admin') {
+    if (!user || !isAdminRole(user.role)) {
       return NextResponse.json(
         { error: 'Forbidden - Admin access required' },
+        { status: 403, headers: getCorsHeaders(request.headers.get('origin')) }
+      );
+    }
+
+    // Prevent restricted_admin from editing their own permissions
+    if (user.role === 'restricted_admin' && user.id === params.id) {
+      return NextResponse.json(
+        { error: 'Restricted admins cannot modify their own account' },
         { status: 403, headers: getCorsHeaders(request.headers.get('origin')) }
       );
     }
@@ -74,13 +82,21 @@ export async function PUT(
 
     // Validate role if provided
     if (role) {
-      const validRoles = ['admin', 'creator', 'reviewer', 'approver'];
+      const validRoles = ['admin', 'restricted_admin', 'creator', 'reviewer', 'approver'];
       if (!validRoles.includes(role)) {
         return NextResponse.json(
           { error: `Invalid role. Must be one of: ${validRoles.join(', ')}` },
           { status: 400, headers: getCorsHeaders(request.headers.get('origin')) }
         );
       }
+    }
+
+    // Prevent restricted_admin from promoting users to full admin
+    if (user.role === 'restricted_admin' && role === 'admin') {
+      return NextResponse.json(
+        { error: 'Restricted admins cannot promote users to full admin' },
+        { status: 403, headers: getCorsHeaders(request.headers.get('origin')) }
+      );
     }
 
     // Prevent admin from deactivating themselves
@@ -269,7 +285,7 @@ export async function DELETE(
   try {
     const { user } = await verifyAuth(request);
 
-    if (!user || user.role !== 'admin') {
+    if (!user || !isAdminRole(user.role)) {
       return NextResponse.json(
         { error: 'Forbidden - Admin access required' },
         { status: 403, headers: getCorsHeaders(request.headers.get('origin')) }

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { corsResponse, corsOptionsResponse } from '@/lib/cors';
-import { verifyAuth } from '@/lib/auth-middleware';
+import { verifyAuth, isAdminRole } from '@/lib/auth-middleware';
 import { query } from '@/lib/db';
 
 export async function OPTIONS(request: NextRequest) {
@@ -11,7 +11,7 @@ export async function OPTIONS(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const authResult = await verifyAuth(request);
-    if (!authResult.authenticated || authResult.user?.role !== 'admin') {
+    if (!authResult.authenticated || !isAdminRole(authResult.user?.role)) {
       const errorResponse = NextResponse.json(
         { error: 'Admin access required' },
         { status: 403 }

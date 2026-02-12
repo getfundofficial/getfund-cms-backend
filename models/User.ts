@@ -46,6 +46,18 @@ export const DEFAULT_PERMISSIONS: Record<string, UserPermissions> = {
     },
     actions: { canPublish: true, canReview: true, canDelete: true }
   },
+  restricted_admin: {
+    navigation: {
+      dashboard: true, news: true, pages: true, heroSlides: true,
+      mediaLibrary: true, impactStats: true, campaigns: true, teamMembers: true,
+      partners: true, reviewQueue: true, approvalQueue: true
+    },
+    admin: {
+      users: true, menuConfig: true, footerSettings: true, auditLogs: true,
+      lotteryConfig: true, lotteryEntries: true, pledges: true, donations: true
+    },
+    actions: { canPublish: true, canReview: true, canDelete: true }
+  },
   creator: {
     navigation: {
       dashboard: true, news: true, pages: true, heroSlides: true,

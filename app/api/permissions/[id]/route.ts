@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { query } from '@/lib/db';
 import { corsResponse, corsOptionsResponse } from '@/lib/cors';
-import { verifyAuth } from '@/lib/auth-middleware';
+import { verifyAuth, isAdminRole } from '@/lib/auth-middleware';
 
 // Handle CORS preflight
 export async function OPTIONS(request: NextRequest) {
@@ -27,7 +27,7 @@ export async function DELETE(
     const user = authResult.user!;
 
     // Only admins can revoke permissions
-    if (user.role !== 'admin') {
+    if (!isAdminRole(user.role)) {
       const errorResponse = NextResponse.json(
         { error: 'Forbidden - Admin access required' },
         { status: 403 }

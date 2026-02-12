@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { query } from '@/lib/db';
 import { corsResponse, corsOptionsResponse } from '@/lib/cors';
-import { verifyAuth } from '@/lib/auth-middleware';
+import { verifyAuth, isAdminRole } from '@/lib/auth-middleware';
 import { AuditLogModel } from '@/models/AuditLog';
 
 // Handle CORS preflight
@@ -28,7 +28,7 @@ export async function POST(
     const user = authResult.user!;
 
     // Only admins can unpublish pages
-    if (user.role !== 'admin') {
+    if (!isAdminRole(user.role)) {
       const errorResponse = NextResponse.json(
         { error: 'Forbidden - Admin access required' },
         { status: 403 }

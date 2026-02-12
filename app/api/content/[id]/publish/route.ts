@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { query } from '@/lib/db';
 import { corsResponse, corsOptionsResponse } from '@/lib/cors';
-import { verifyAuth } from '@/lib/auth-middleware';
+import { verifyAuth, isAdminRole } from '@/lib/auth-middleware';
 import { AuditLogModel } from '@/models/AuditLog';
 
 // Handle CORS preflight
@@ -26,7 +26,7 @@ export async function POST(
     }
 
     // Check if user has permission to publish (approver or admin)
-    if (authResult.user.role !== 'approver' && authResult.user.role !== 'admin') {
+    if (authResult.user.role !== 'approver' && !isAdminRole(authResult.user.role)) {
       const errorResponse = NextResponse.json(
         { error: 'You do not have permission to publish content' },
         { status: 403 }

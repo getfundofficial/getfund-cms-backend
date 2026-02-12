@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { query } from '@/lib/db';
 import { corsResponse, corsOptionsResponse } from '@/lib/cors';
-import { verifyAuth } from '@/lib/auth-middleware';
+import { verifyAuth, isAdminRole } from '@/lib/auth-middleware';
 import { sanitizeUrls } from '@/lib/url-utils';
 import { AuditLogModel } from '@/models/AuditLog';
 
@@ -208,7 +208,7 @@ export async function PUT(
     const pageId = oldPage.id;
 
     // Check permissions (admin or has edit permission)
-    if (user.role !== 'admin') {
+    if (!isAdminRole(user.role)) {
       const permissionResult = await query(`
         SELECT id FROM page_permissions
         WHERE page_id = $1
@@ -352,7 +352,7 @@ export async function DELETE(
     const user = authResult.user!;
 
     // Only admins can delete pages
-    if (user.role !== 'admin') {
+    if (!isAdminRole(user.role)) {
       const errorResponse = NextResponse.json(
         { error: 'Forbidden - Admin access required' },
         { status: 403 }

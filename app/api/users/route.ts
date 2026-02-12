@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { verifyAuth } from '@/lib/auth-middleware';
+import { verifyAuth, isAdminRole } from '@/lib/auth-middleware';
 import { query } from '@/lib/db';
 import { getCorsHeaders } from '@/lib/cors';
 import bcrypt from 'bcrypt';
@@ -14,7 +14,7 @@ export async function GET(request: NextRequest) {
   try {
     const { user } = await verifyAuth(request);
 
-    if (!user || user.role !== 'admin') {
+    if (!user || !isAdminRole(user.role)) {
       return NextResponse.json(
         { error: 'Forbidden - Admin access required' },
         { status: 403, headers: getCorsHeaders(request.headers.get('origin')) }
@@ -53,7 +53,7 @@ export async function POST(request: NextRequest) {
   try {
     const { user } = await verifyAuth(request);
 
-    if (!user || user.role !== 'admin') {
+    if (!user || !isAdminRole(user.role)) {
       return NextResponse.json(
         { error: 'Forbidden - Admin access required' },
         { status: 403, headers: getCorsHeaders(request.headers.get('origin')) }
@@ -72,11 +72,19 @@ export async function POST(request: NextRequest) {
     }
 
     // Validate role
-    const validRoles = ['admin', 'creator', 'reviewer', 'approver'];
+    const validRoles = ['admin', 'restricted_admin', 'creator', 'reviewer', 'approver'];
     if (!validRoles.includes(role)) {
       return NextResponse.json(
         { error: `Invalid role. Must be one of: ${validRoles.join(', ')}` },
         { status: 400, headers: getCorsHeaders(request.headers.get('origin')) }
+      );
+    }
+
+    // Prevent restricted_admin from creating full admin users
+    if (user.role === 'restricted_admin' && role === 'admin') {
+      return NextResponse.json(
+        { error: 'Restricted admins cannot create full admin users' },
+        { status: 403, headers: getCorsHeaders(request.headers.get('origin')) }
       );
     }
 

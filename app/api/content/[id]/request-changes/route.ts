@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { query } from '@/lib/db';
 import { corsResponse, corsOptionsResponse } from '@/lib/cors';
-import { verifyAuth } from '@/lib/auth-middleware';
+import { verifyAuth, isAdminRole } from '@/lib/auth-middleware';
 
 // Handle CORS preflight
 export async function OPTIONS(request: NextRequest) {
@@ -26,7 +26,7 @@ export async function POST(
 
     // Check if user has review/approval permissions
     const hasPermission =
-      authResult.user.role === 'admin' ||
+      isAdminRole(authResult.user.role) ||
       authResult.user.role === 'approver' ||
       authResult.user.role === 'reviewer';
 

@@ -2,6 +2,11 @@ import { NextRequest } from 'next/server';
 import * as jwt from 'jsonwebtoken';
 import { jwtConfig } from './jwt';
 
+/** Checks if a role has admin-level API access (both full admin and restricted admin) */
+export function isAdminRole(role: string | undefined | null): boolean {
+  return role === 'admin' || role === 'restricted_admin';
+}
+
 interface DecodedToken {
   userId: string;
   email: string;
@@ -85,5 +90,5 @@ export function checkPermission(user: any, requiredPermission: string): boolean 
   if (!user || !user.permissions) {
     return false;
   }
-  return user.permissions.includes(requiredPermission) || user.role === 'admin';
+  return user.permissions.includes(requiredPermission) || isAdminRole(user.role);
 }

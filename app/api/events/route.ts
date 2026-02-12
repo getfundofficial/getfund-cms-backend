@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import Event from '@/models/Event';
-import { verifyAuth } from '@/lib/auth-middleware';
+import { verifyAuth, isAdminRole } from '@/lib/auth-middleware';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -68,7 +68,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Check admin role
-    if (authResult.user?.role !== 'admin') {
+    if (!isAdminRole(authResult.user?.role)) {
       return NextResponse.json(
         { success: false, error: 'Admin access required' },
         { status: 403, headers: corsHeaders }
