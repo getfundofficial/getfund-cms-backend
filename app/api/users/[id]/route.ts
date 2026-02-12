@@ -5,7 +5,7 @@ import { getCorsHeaders } from '@/lib/cors';
 import bcrypt from 'bcrypt';
 import { AuditLogModel } from '@/models/AuditLog';
 
-// GET /api/users/:id - Get single user (admin only)
+// GET /api/users/:id - Get single user (full admin only)
 export async function GET(
   request: NextRequest,
   { params }: { params: { id: string } }
@@ -13,9 +13,9 @@ export async function GET(
   try {
     const { user } = await verifyAuth(request);
 
-    if (!user || !isAdminRole(user.role)) {
+    if (!user || user.role !== 'admin') {
       return NextResponse.json(
-        { error: 'Forbidden - Admin access required' },
+        { error: 'Forbidden - Full admin access required' },
         { status: 403, headers: getCorsHeaders(request.headers.get('origin')) }
       );
     }
@@ -54,7 +54,7 @@ export async function GET(
   }
 }
 
-// PUT /api/users/:id - Update user (admin only)
+// PUT /api/users/:id - Update user (full admin only)
 export async function PUT(
   request: NextRequest,
   { params }: { params: { id: string } }
@@ -62,9 +62,9 @@ export async function PUT(
   try {
     const { user } = await verifyAuth(request);
 
-    if (!user || !isAdminRole(user.role)) {
+    if (!user || user.role !== 'admin') {
       return NextResponse.json(
-        { error: 'Forbidden - Admin access required' },
+        { error: 'Forbidden - Full admin access required' },
         { status: 403, headers: getCorsHeaders(request.headers.get('origin')) }
       );
     }
@@ -278,7 +278,7 @@ export async function PUT(
   }
 }
 
-// DELETE /api/users/:id - Deactivate or permanently delete user (admin only)
+// DELETE /api/users/:id - Deactivate or permanently delete user (full admin only)
 export async function DELETE(
   request: NextRequest,
   { params }: { params: { id: string } }
@@ -286,9 +286,9 @@ export async function DELETE(
   try {
     const { user } = await verifyAuth(request);
 
-    if (!user || !isAdminRole(user.role)) {
+    if (!user || user.role !== 'admin') {
       return NextResponse.json(
-        { error: 'Forbidden - Admin access required' },
+        { error: 'Forbidden - Full admin access required' },
         { status: 403, headers: getCorsHeaders(request.headers.get('origin')) }
       );
     }

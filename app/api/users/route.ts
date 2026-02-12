@@ -9,14 +9,14 @@ import { AuditLogModel } from '@/models/AuditLog';
 // Configure route to allow longer execution time for database wake-up
 export const maxDuration = 180; // 180 seconds (3 minutes)
 
-// GET /api/users - Get all users (admin only)
+// GET /api/users - Get all users (full admin only)
 export async function GET(request: NextRequest) {
   try {
     const { user } = await verifyAuth(request);
 
-    if (!user || !isAdminRole(user.role)) {
+    if (!user || user.role !== 'admin') {
       return NextResponse.json(
-        { error: 'Forbidden - Admin access required' },
+        { error: 'Forbidden - Full admin access required' },
         { status: 403, headers: getCorsHeaders(request.headers.get('origin')) }
       );
     }
@@ -48,14 +48,14 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// POST /api/users - Create new user (admin only)
+// POST /api/users - Create new user (full admin only)
 export async function POST(request: NextRequest) {
   try {
     const { user } = await verifyAuth(request);
 
-    if (!user || !isAdminRole(user.role)) {
+    if (!user || user.role !== 'admin') {
       return NextResponse.json(
-        { error: 'Forbidden - Admin access required' },
+        { error: 'Forbidden - Full admin access required' },
         { status: 403, headers: getCorsHeaders(request.headers.get('origin')) }
       );
     }

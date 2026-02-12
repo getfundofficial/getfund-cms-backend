@@ -53,7 +53,7 @@ export const DEFAULT_PERMISSIONS: Record<string, UserPermissions> = {
       partners: true, reviewQueue: true, approvalQueue: true
     },
     admin: {
-      users: true, menuConfig: true, footerSettings: true, auditLogs: true,
+      users: false, menuConfig: true, footerSettings: true, auditLogs: true,
       lotteryConfig: true, lotteryEntries: true, pledges: true, donations: true
     },
     actions: { canPublish: true, canReview: true, canDelete: true }
