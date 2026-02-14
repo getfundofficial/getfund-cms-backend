@@ -16,7 +16,7 @@ const pool = new Pool({
 });
 
 // Target directory for news images
-const NEWS_IMAGES_DIR = path.join(__dirname, '../../getfund-website/public/images/news');
+const NEWS_IMAGES_DIR = path.join(__dirname, '../../../getfund-website/public/images/news');
 
 // Ensure the directory exists
 if (!fs.existsSync(NEWS_IMAGES_DIR)) {
@@ -25,7 +25,32 @@ if (!fs.existsSync(NEWS_IMAGES_DIR)) {
 
 // ALL news articles from GETFund official website (scraped from all pages)
 const ALL_GETFUND_NEWS = [
-  // Page 1
+  // Page 1 - Newest 2026 articles
+  {
+    title: "GETFund Deputy Administrator Visits Schools Affected by Fire in the Northern Region",
+    date: "2026-02-04",
+    image: "https://www.getfund.gov.gh/wp-content/uploads/2026/02/Dept-770x417.png",
+    excerpt: "The Deputy Administrator of the Ghana Education Trust Fund (GETFund) Hon. Sualihu Dandaawa has paid an emergency working visit to the Northern Business Senior High School (NOBISCO) and Tolon SHS following devastating fire outbreaks."
+  },
+  {
+    title: "GETFund Deputy Administrator Calls for Investigation into Causes of Recurrent Fires at NOBISCO and Tolon SHS",
+    date: "2026-02-04",
+    image: "https://www.getfund.gov.gh/wp-content/uploads/2026/02/IMG_1149-770x417.jpg",
+    excerpt: "The Deputy Administrator for the Ghana Education Trust Fund (GETFund), Hon. Sualihu Dandaawa has called for an intensive investigation into the recurring fire outbreaks at Northern Business School (NOBISCO) and Tolon Senior High School."
+  },
+  {
+    title: "His Lordship the Chief Justice Calls on GETFund for Judicial Service Reforms",
+    date: "2026-01-26",
+    image: "https://www.getfund.gov.gh/wp-content/uploads/2026/01/CJ-770x417.png",
+    excerpt: "The Chief Justice, His Lordship Paul Baffoe Bonnie has recently called on the administrator of the Ghana Education Trust Fund (GETFund) Mr. Paul Adjei in a historic visit to solicit support for critical infrastructure and resources."
+  },
+  {
+    title: "CHASS Leadership Engages GETFund Administrator",
+    date: "2026-01-23",
+    image: "https://www.getfund.gov.gh/wp-content/uploads/2026/01/WhatsApp-Image-2026-01-23-at-07.30.17-1-770x417.jpeg",
+    excerpt: "Executives of the Conference of Heads of Assisted Secondary Schools (CHASS) in Ghana paid a courtesy call on the Administrator of the Ghana Education Trust Fund (GETFund) Mr. Paul Adjei at his office in Accra."
+  },
+  // Existing articles
   {
     title: "GETFund Receives Delegation from University of Virgin Islands",
     date: "2025-12-18",

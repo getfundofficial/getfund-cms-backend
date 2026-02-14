@@ -8,7 +8,13 @@
     "start": "next start -p 5000",
     "migrate": "node src/database/migrate.js",
     "seed": "node src/database/seed.js",
-    "migrate:legacy-pages": "tsx scripts/migrate-legacy-pages.ts"
+    "migrate:legacy-pages": "tsx scripts/migrate-legacy-pages.ts",
+    "sync:news": "node scripts/sync-all-news.js",
+    "sync:media": "node scripts/news-media-sync/index.js",
+    "sync:media:phase1": "node scripts/news-media-sync/index.js --phase 1",
+    "sync:media:phase2": "node scripts/news-media-sync/index.js --phase 2",
+    "sync:media:phase3": "node scripts/news-media-sync/index.js --phase 3",
+    "sync:media:phase4": "node scripts/news-media-sync/index.js --phase 4"
   },
   "keywords": [
     "cms",

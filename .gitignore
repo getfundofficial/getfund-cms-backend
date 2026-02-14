@@ -7,3 +7,6 @@ uploads/*
 .next/
 .vercel
 tsconfig.tsbuildinfo
+
+.vercel
+.env*.local

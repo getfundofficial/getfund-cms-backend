@@ -88,11 +88,17 @@ export async function PUT(
       published_at,
     } = body;
 
+    // Merge meta_data with existing data to preserve pipeline-populated fields
+    // (e.g. meta_data.images for carousel) when the CMS form doesn't send them
     const result = await query(
       `UPDATE content
        SET title = $1, slug = $2, excerpt = $3, body = $4,
            author = $5, category = $6, featured_image_url = $7,
-           meta_data = $8, published_at = $9, updated_at = NOW()
+           meta_data = CASE
+             WHEN $8::jsonb IS NOT NULL THEN COALESCE(meta_data, '{}'::jsonb) || $8::jsonb
+             ELSE meta_data
+           END,
+           published_at = $9, updated_at = NOW()
        WHERE id = $10 AND deleted_at IS NULL
        RETURNING *`,
       [

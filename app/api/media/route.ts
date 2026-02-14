@@ -33,8 +33,17 @@ export async function GET(request: NextRequest) {
       ORDER BY created_at DESC
     `);
 
+    // Resolve relative /images/ paths to the website URL for production
+    const websiteUrl = process.env.WEBSITE_URL || '';
+    const media = result.rows.map((row: any) => ({
+      ...row,
+      url: row.url && row.url.startsWith('/images/') && websiteUrl
+        ? `${websiteUrl}${row.url}`
+        : row.url,
+    }));
+
     return NextResponse.json(
-      { media: result.rows },
+      { media },
       { headers: getCorsHeaders(request.headers.get('origin')) }
     );
   } catch (error: any) {
@@ -155,6 +164,70 @@ export async function POST(request: NextRequest) {
     console.error('Error uploading file:', error);
     return NextResponse.json(
       { error: 'Failed to upload file' },
+      { status: 500, headers: getCorsHeaders(request.headers.get('origin')) }
+    );
+  }
+}
+
+// DELETE /api/media - Bulk delete media files
+export async function DELETE(request: NextRequest) {
+  try {
+    const { user } = await verifyAuth(request);
+
+    if (!user) {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401, headers: getCorsHeaders(request.headers.get('origin')) }
+      );
+    }
+
+    const body = await request.json();
+    const { ids } = body;
+
+    if (!Array.isArray(ids) || ids.length === 0) {
+      return NextResponse.json(
+        { error: 'Please provide an array of media IDs to delete' },
+        { status: 400, headers: getCorsHeaders(request.headers.get('origin')) }
+      );
+    }
+
+    // Soft delete all specified media items
+    const placeholders = ids.map((_: string, i: number) => `$${i + 1}`).join(', ');
+    const result = await query(
+      `UPDATE media SET deleted_at = NOW() WHERE id IN (${placeholders}) AND deleted_at IS NULL RETURNING id, filename`,
+      ids
+    );
+
+    const deletedCount = result.rows.length;
+
+    // Log bulk deletion in audit trail
+    const ipAddress = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown';
+    const userAgent = request.headers.get('user-agent') || '';
+
+    await AuditLogModel.create({
+      user_id: user.id,
+      action: 'bulk_delete',
+      entity_type: 'media',
+      entity_id: 'bulk',
+      changes: {
+        deleted_count: deletedCount,
+        ids: ids,
+      },
+      ip_address: ipAddress,
+      user_agent: userAgent,
+    });
+
+    return NextResponse.json(
+      {
+        message: `${deletedCount} media item${deletedCount !== 1 ? 's' : ''} deleted successfully`,
+        deleted_count: deletedCount,
+      },
+      { headers: getCorsHeaders(request.headers.get('origin')) }
+    );
+  } catch (error: any) {
+    console.error('Error bulk deleting media:', error);
+    return NextResponse.json(
+      { error: 'Failed to delete media items' },
       { status: 500, headers: getCorsHeaders(request.headers.get('origin')) }
     );
   }

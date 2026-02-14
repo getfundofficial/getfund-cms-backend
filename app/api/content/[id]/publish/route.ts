@@ -39,7 +39,7 @@ export async function POST(
       `UPDATE content
        SET status = 'published',
            published_by = $1,
-           published_at = NOW(),
+           published_at = COALESCE(published_at, NOW()),
            updated_at = NOW()
        WHERE id = $2 AND deleted_at IS NULL
        RETURNING *`,
