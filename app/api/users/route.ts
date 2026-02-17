@@ -5,6 +5,7 @@ import { getCorsHeaders } from '@/lib/cors';
 import bcrypt from 'bcrypt';
 import { DEFAULT_PERMISSIONS, UserPermissions } from '@/models/User';
 import { AuditLogModel } from '@/models/AuditLog';
+import { DEFAULT_USER_PASSWORD } from '@/lib/constants';
 
 // Configure route to allow longer execution time for database wake-up
 export const maxDuration = 180; // 180 seconds (3 minutes)
@@ -28,6 +29,7 @@ export async function GET(request: NextRequest) {
         full_name,
         role,
         is_active,
+        must_change_password,
         permissions,
         created_at,
         updated_at
@@ -61,7 +63,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { email, full_name, role, password, permissions } = body;
+    const { email, full_name, role, permissions } = body;
 
     // Validate required fields
     if (!email || !full_name || !role) {
@@ -110,16 +112,13 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Generate password if not provided
-    const userPassword = password || generateRandomPassword();
-
-    // Hash password
-    const passwordHash = await bcrypt.hash(userPassword, 10);
+    // Hash the default password
+    const passwordHash = await bcrypt.hash(DEFAULT_USER_PASSWORD, 10);
 
     // Use provided permissions or default based on role
     const userPermissions: UserPermissions = permissions || DEFAULT_PERMISSIONS[role] || DEFAULT_PERMISSIONS.creator;
 
-    // Create user
+    // Create user with must_change_password flag
     const result = await query(`
       INSERT INTO users (
         email,
@@ -127,9 +126,10 @@ export async function POST(request: NextRequest) {
         full_name,
         role,
         permissions,
-        is_active
-      ) VALUES ($1, $2, $3, $4, $5, true)
-      RETURNING id, email, full_name, role, permissions, is_active, created_at
+        is_active,
+        must_change_password
+      ) VALUES ($1, $2, $3, $4, $5, true, true)
+      RETURNING id, email, full_name, role, permissions, is_active, must_change_password, created_at
     `, [email, passwordHash, full_name, role, JSON.stringify(userPermissions)]);
 
     const newUser = result.rows[0];
@@ -161,9 +161,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(
       {
         message: 'User created successfully',
-        user: newUser,
-        // Only return password if it was auto-generated
-        ...(password ? {} : { generatedPassword: userPassword })
+        user: newUser
       },
       {
         status: 201,
@@ -187,13 +185,3 @@ export async function OPTIONS(request: NextRequest) {
   });
 }
 
-// Helper function to generate random password
-function generateRandomPassword(): string {
-  const length = 12;
-  const charset = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*';
-  let password = '';
-  for (let i = 0; i < length; i++) {
-    password += charset.charAt(Math.floor(Math.random() * charset.length));
-  }
-  return password;
-}

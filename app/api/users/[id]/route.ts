@@ -27,6 +27,7 @@ export async function GET(
         full_name,
         role,
         is_active,
+        must_change_password,
         permissions,
         created_at,
         updated_at
@@ -152,6 +153,8 @@ export async function PUT(
       updates.push(`password_hash = $${paramIndex}`);
       values.push(passwordHash);
       paramIndex++;
+      // Force user to change password on next login
+      updates.push(`must_change_password = true`);
     }
 
     if (effectivePermissions !== undefined) {
@@ -174,7 +177,7 @@ export async function PUT(
       UPDATE users
       SET ${updates.join(', ')}
       WHERE id = $${paramIndex}
-      RETURNING id, email, full_name, role, is_active, permissions, created_at, updated_at
+      RETURNING id, email, full_name, role, is_active, must_change_password, permissions, created_at, updated_at
     `, values);
 
     if (result.rows.length === 0) {

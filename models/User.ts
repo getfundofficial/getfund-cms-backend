@@ -103,6 +103,7 @@ export interface User {
   role: string;
   password_hash?: string;
   is_active: boolean;
+  must_change_password: boolean;
   permissions?: UserPermissions;
   created_at: Date;
   updated_at?: Date;
@@ -121,16 +122,25 @@ export class UserModel {
   // Find user by ID (without password)
   static async findById(id: string): Promise<Omit<User, 'password_hash'> | null> {
     const result = await query(
-      'SELECT id, email, full_name, role, is_active, permissions, created_at FROM users WHERE id = $1',
+      'SELECT id, email, full_name, role, is_active, must_change_password, permissions, created_at FROM users WHERE id = $1',
       [id]
     );
     return (result.rows[0] as Omit<User, 'password_hash'>) || null;
   }
 
+  // Find user by ID with password hash (for password verification)
+  static async findByIdWithHash(id: string): Promise<User | null> {
+    const result = await query(
+      'SELECT * FROM users WHERE id = $1',
+      [id]
+    );
+    return (result.rows[0] as User) || null;
+  }
+
   // Get all users
   static async getAll(): Promise<Omit<User, 'password_hash'>[]> {
     const result = await query(
-      'SELECT id, email, full_name, role, is_active, permissions, created_at FROM users ORDER BY created_at DESC'
+      'SELECT id, email, full_name, role, is_active, must_change_password, permissions, created_at FROM users ORDER BY created_at DESC'
     );
     return result.rows as Omit<User, 'password_hash'>[];
   }
@@ -201,6 +211,22 @@ export class UserModel {
     await query(
       'UPDATE users SET is_active = false, updated_at = NOW() WHERE id = $1',
       [id]
+    );
+  }
+
+  // Update password and clear must_change_password flag (for user-initiated change)
+  static async updatePassword(id: string, passwordHash: string): Promise<void> {
+    await query(
+      'UPDATE users SET password_hash = $1, must_change_password = false, updated_at = NOW() WHERE id = $2',
+      [passwordHash, id]
+    );
+  }
+
+  // Reset password to default and set must_change_password flag (for admin reset)
+  static async resetPasswordToDefault(id: string, passwordHash: string): Promise<void> {
+    await query(
+      'UPDATE users SET password_hash = $1, must_change_password = true, updated_at = NOW() WHERE id = $2',
+      [passwordHash, id]
     );
   }
 }

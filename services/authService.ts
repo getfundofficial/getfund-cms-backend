@@ -106,7 +106,8 @@ export class AuthService {
         email: user.email,
         full_name: user.full_name,
         role: user.role,
-        permissions: user.permissions || null
+        permissions: user.permissions || null,
+        must_change_password: user.must_change_password
       },
       accessToken,
       refreshToken
@@ -160,6 +161,7 @@ export class AuthService {
       role: user.role,
       permissions: user.permissions || null,
       is_active: user.is_active,
+      must_change_password: user.must_change_password,
       created_at: user.created_at
     };
   }
