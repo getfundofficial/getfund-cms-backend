@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getCorsHeaders } from '@/lib/cors';
 import { UserModel } from '@/models/User';
 import { PasswordResetRequestModel } from '@/models/PasswordResetRequest';
+import { AuditLogModel } from '@/models/AuditLog';
 
 export const maxDuration = 180;
 
@@ -21,11 +22,25 @@ export async function POST(request: NextRequest) {
     // Look up user (but always return same message to prevent enumeration)
     const user = await UserModel.findByEmail(email);
 
+    const ipAddress = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown';
+    const userAgent = request.headers.get('user-agent') || '';
+
     if (user && user.is_active) {
       // Check if there's already a pending request
       const existing = await PasswordResetRequestModel.findPendingByUserId(user.id);
       if (!existing) {
         await PasswordResetRequestModel.create(user.id);
+
+        // Audit trail: log the reset request creation
+        await AuditLogModel.create({
+          user_id: user.id,
+          action: 'password_reset_request',
+          entity_type: 'user',
+          entity_id: user.id,
+          changes: { requested_via: 'forgot_password_form' },
+          ip_address: ipAddress,
+          user_agent: userAgent,
+        });
       }
     }
 

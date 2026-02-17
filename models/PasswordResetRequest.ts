@@ -66,6 +66,13 @@ export class PasswordResetRequestModel {
     return result.rows[0] as PasswordResetRequest;
   }
 
+  static async countPending(): Promise<number> {
+    const result = await query(
+      `SELECT COUNT(*) as count FROM password_reset_requests WHERE status = 'pending'`
+    );
+    return parseInt(result.rows[0].count, 10);
+  }
+
   static async reject(id: string, resolvedBy: string, notes?: string): Promise<PasswordResetRequest> {
     const result = await query(
       `UPDATE password_reset_requests
