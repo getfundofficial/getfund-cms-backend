@@ -84,22 +84,9 @@ export async function PUT(
       }
     }
 
-    // Prevent restricted_admin from escalating privileges
-    if (user.role === 'restricted_admin') {
-      // Cannot promote anyone to full admin
-      if (role === 'admin') {
-        return NextResponse.json(
-          { error: 'Restricted admins cannot promote users to full admin' },
-          { status: 403, headers: getCorsHeaders(request.headers.get('origin')) }
-        );
-      }
-    }
-
-    // Determine if role/permissions should be applied
-    // Restricted admins cannot change their own role or permissions (prevents self-escalation)
-    const isSelfEditByRestrictedAdmin = user.role === 'restricted_admin' && user.id === params.id;
-    const effectiveRole = isSelfEditByRestrictedAdmin ? undefined : role;
-    const effectivePermissions = isSelfEditByRestrictedAdmin ? undefined : permissions;
+    // Role and permissions are applied directly (only full admins reach this point)
+    const effectiveRole = role;
+    const effectivePermissions = permissions;
 
     // Prevent admin from deactivating themselves
     if (is_active === false && user.id === params.id) {

@@ -82,14 +82,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Prevent restricted_admin from creating full admin users
-    if (user.role === 'restricted_admin' && role === 'admin') {
-      return NextResponse.json(
-        { error: 'Restricted admins cannot create full admin users' },
-        { status: 403, headers: getCorsHeaders(request.headers.get('origin')) }
-      );
-    }
-
     // Validate email format
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
