@@ -1,3 +1,4 @@
+export const dynamic = "force-dynamic";
 import { NextRequest, NextResponse } from 'next/server';
 import { MenuItemModel, CreateMenuItemInput } from '@/models/MenuItem';
 import { corsResponse, corsOptionsResponse } from '@/lib/cors';

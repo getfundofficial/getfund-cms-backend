@@ -3,9 +3,9 @@
   "version": "1.0.0",
   "description": "GETFund CMS Backend API - Next.js",
   "scripts": {
-    "dev": "next dev -p 5000",
+    "dev": "next dev -p 5001",
     "build": "next build",
-    "start": "next start -p 5000",
+    "start": "next start -p 5001",
     "migrate": "node src/database/migrate.js",
     "seed": "node src/database/seed.js",
     "migrate:legacy-pages": "tsx scripts/migrate-legacy-pages.ts",

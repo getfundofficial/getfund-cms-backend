@@ -1,3 +1,4 @@
+export const dynamic = "force-dynamic";
 import { NextRequest, NextResponse } from 'next/server';
 import Partner from '@/models/Partner';
 import { AuditLogModel } from '@/models/AuditLog';
@@ -23,12 +24,16 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const all = searchParams.get('all');
+    const category = searchParams.get('category');
 
     let data;
 
     if (all === 'true') {
       // Return all partners (for CMS admin)
       data = await Partner.getAll();
+    } else if (category) {
+      // Return active partners filtered by category (e.g., 'university')
+      data = await Partner.getByCategory(category);
     } else {
       // Return only active partners (for public website)
       data = await Partner.getActive();
@@ -68,6 +73,7 @@ export async function POST(request: NextRequest) {
       logo_url: body.logo_url,
       website_url: body.website_url,
       description: body.description,
+      category: body.category,
       display_order: body.display_order,
       is_active: body.is_active,
     });

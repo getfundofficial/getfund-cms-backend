@@ -1,3 +1,4 @@
+export const dynamic = "force-dynamic";
 import { NextRequest, NextResponse } from 'next/server';
 import { corsOptionsResponse, corsResponse } from '@/lib/cors';
 import { verifyAuth } from '@/lib/auth-middleware';

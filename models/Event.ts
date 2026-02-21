@@ -1,6 +1,10 @@
 import { neon } from '@neondatabase/serverless';
 
-const sql = neon(process.env.DATABASE_URL!);
+let _sql: ReturnType<typeof neon>;
+function sql(strings: TemplateStringsArray, ...values: any[]): Promise<Record<string, any>[]> {
+  if (!_sql) _sql = neon(process.env.DATABASE_URL!);
+  return _sql(strings, ...values) as Promise<Record<string, any>[]>;
+}
 
 export interface CompanyEvent {
   id: number;

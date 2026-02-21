@@ -1,3 +1,4 @@
+export const dynamic = "force-dynamic";
 import { NextRequest, NextResponse } from 'next/server';
 import Event from '@/models/Event';
 import { verifyAuth, isAdminRole } from '@/lib/auth-middleware';

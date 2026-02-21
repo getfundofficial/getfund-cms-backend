@@ -1,6 +1,10 @@
 import { neon } from '@neondatabase/serverless';
 
-const sql = neon(process.env.DATABASE_URL!);
+let _sql: ReturnType<typeof neon>;
+function getSql() {
+  if (!_sql) _sql = neon(process.env.DATABASE_URL!);
+  return _sql;
+}
 
 export interface Partner {
   id: string;
@@ -8,6 +12,7 @@ export interface Partner {
   logo_url: string;
   website_url?: string;
   description?: string;
+  category?: string;
   display_order: number;
   is_active: boolean;
   created_at: Date;
@@ -19,6 +24,7 @@ export interface CreatePartnerInput {
   logo_url: string;
   website_url?: string;
   description?: string;
+  category?: string;
   display_order?: number;
   is_active?: boolean;
 }
@@ -28,6 +34,7 @@ export interface UpdatePartnerInput {
   logo_url?: string;
   website_url?: string;
   description?: string;
+  category?: string;
   display_order?: number;
   is_active?: boolean;
 }
@@ -37,7 +44,7 @@ class PartnerModel {
    * Get all partners (for CMS admin)
    */
   async getAll(): Promise<Partner[]> {
-    const result = await sql`
+    const result = await getSql()`
       SELECT * FROM partners
       ORDER BY display_order ASC, created_at DESC
     `;
@@ -48,9 +55,21 @@ class PartnerModel {
    * Get active partners (for public website)
    */
   async getActive(): Promise<Partner[]> {
-    const result = await sql`
+    const result = await getSql()`
       SELECT * FROM partners
       WHERE is_active = true
+      ORDER BY display_order ASC, created_at DESC
+    `;
+    return result as Partner[];
+  }
+
+  /**
+   * Get active partners by category (e.g., 'university')
+   */
+  async getByCategory(category: string): Promise<Partner[]> {
+    const result = await getSql()`
+      SELECT * FROM partners
+      WHERE is_active = true AND category = ${category}
       ORDER BY display_order ASC, created_at DESC
     `;
     return result as Partner[];
@@ -60,7 +79,7 @@ class PartnerModel {
    * Get a single partner by ID
    */
   async getById(id: string): Promise<Partner | null> {
-    const result = await sql`
+    const result = await getSql()`
       SELECT * FROM partners
       WHERE id = ${id}
     `;
@@ -71,15 +90,16 @@ class PartnerModel {
    * Create a new partner
    */
   async create(data: CreatePartnerInput): Promise<Partner> {
-    const result = await sql`
+    const result = await getSql()`
       INSERT INTO partners (
-        name, logo_url, website_url, description, display_order, is_active
+        name, logo_url, website_url, description, category, display_order, is_active
       )
       VALUES (
         ${data.name},
         ${data.logo_url},
         ${data.website_url || null},
         ${data.description || null},
+        ${data.category || null},
         ${data.display_order || 0},
         ${data.is_active !== undefined ? data.is_active : true}
       )
@@ -112,6 +132,10 @@ class PartnerModel {
       updates.push(`description = $${paramIndex++}`);
       values.push(data.description);
     }
+    if (data.category !== undefined) {
+      updates.push(`category = $${paramIndex++}`);
+      values.push(data.category);
+    }
     if (data.display_order !== undefined) {
       updates.push(`display_order = $${paramIndex++}`);
       values.push(data.display_order);
@@ -131,7 +155,7 @@ class PartnerModel {
       RETURNING *
     `;
 
-    const result = await sql(query, values);
+    const result = await getSql()(query, values);
     return result[0] as Partner;
   }
 
@@ -139,7 +163,7 @@ class PartnerModel {
    * Delete a partner
    */
   async delete(id: string): Promise<void> {
-    await sql`
+    await getSql()`
       DELETE FROM partners
       WHERE id = ${id}
     `;
@@ -150,7 +174,7 @@ class PartnerModel {
    */
   async updateOrder(orderData: { id: string; display_order: number }[]): Promise<void> {
     for (const item of orderData) {
-      await sql`
+      await getSql()`
         UPDATE partners
         SET display_order = ${item.display_order}, updated_at = CURRENT_TIMESTAMP
         WHERE id = ${item.id}

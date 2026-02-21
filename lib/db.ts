@@ -1,31 +1,40 @@
 import { neon, Pool } from '@neondatabase/serverless';
 
-// Use Neon serverless driver for queries (recommended for Vercel Edge/Serverless)
-// Note: We don't set a timeout here because AbortSignal.timeout() creates a signal that
-// expires after a fixed duration from creation, not from when it's used. Instead, we
-// rely on the retry logic in retryQuery() to handle database wake-up delays.
-const sql = neon(process.env.DATABASE_URL!);
+// Lazy-initialized instances to avoid build-time errors when DATABASE_URL is not set
+let _sql: ReturnType<typeof neon> | null = null;
+let _pool: Pool | null = null;
 
-// Use Neon Pool for traditional connection pooling
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  connectionTimeoutMillis: 180000, // Increased to 180 seconds for database wake-up
-  idleTimeoutMillis: 10000,
-  max: 5,
-});
+function getSql() {
+  if (!_sql) {
+    _sql = neon(process.env.DATABASE_URL!);
+  }
+  return _sql;
+}
 
-pool.on('error', (err) => {
-  console.error('Unexpected database error:', err);
-});
+function getPool() {
+  if (!_pool) {
+    _pool = new Pool({
+      connectionString: process.env.DATABASE_URL,
+      connectionTimeoutMillis: 180000, // Increased to 180 seconds for database wake-up
+      idleTimeoutMillis: 10000,
+      max: 5,
+    });
+    _pool.on('error', (err) => {
+      console.error('Unexpected database error:', err);
+    });
+  }
+  return _pool;
+}
 
 // Helper function with retry logic for Neon database wake-up
 async function retryQuery(text: string, params?: any[], maxRetries = 3) {
   let lastError: any;
+  const sql = getSql();
 
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
       console.log(`[DB] Query attempt ${attempt}/${maxRetries}`);
-      const result = await sql(text, params || []);
+      const result = await sql(text, params || []) as Record<string, any>[];
 
       if (attempt > 1) {
         console.log(`[DB] Query succeeded after ${attempt} attempts`);
@@ -64,6 +73,7 @@ export async function query(text: string, params?: any[]) {
 
 // Helper function for transactions (uses traditional pool)
 export async function transaction(callback: (client: any) => Promise<void>) {
+  const pool = getPool();
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
@@ -77,5 +87,5 @@ export async function transaction(callback: (client: any) => Promise<void>) {
   }
 }
 
-// Export both for flexibility
-export { pool, sql };
+// Export getters for flexibility
+export { getPool as pool, getSql as sql };
