@@ -679,20 +679,20 @@ export default function AdminPage() {
               )}
             </div>
 
-            {/* Description Section */}
+            {/* Board Description */}
             <div>
               <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#374151', marginBottom: '8px' }}>
-                Board Description (HTML supported)
+                Board Description
               </label>
               <textarea
                 value={boardDescription}
                 onChange={(e) => setBoardDescription(e.target.value)}
-                rows={10}
-                placeholder="Enter the board description content. HTML tags are supported..."
-                style={{ ...inputStyle, width: '100%', fontFamily: 'monospace', resize: 'vertical', boxSizing: 'border-box' }}
+                rows={3}
+                placeholder="Brief description of the Board of Trustees..."
+                style={{ ...inputStyle, width: '100%', resize: 'vertical', boxSizing: 'border-box' }}
               />
               <p style={{ fontSize: '12px', color: '#6b7280', marginTop: '4px' }}>
-                You can use HTML tags like &lt;p&gt;, &lt;h3&gt;, &lt;ul&gt;, &lt;li&gt; for formatting
+                Plain text only. Board members list is managed separately.
               </p>
             </div>
           </div>
