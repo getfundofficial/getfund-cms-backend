@@ -12,7 +12,7 @@ export class AuthService {
     if (!user) {
       // Log failed login attempt (email not found)
       await AuditLogModel.create({
-        user_id: 'unknown',
+        user_id: null as any,
         action: 'failed_login',
         entity_type: 'auth',
         entity_id: email,
