@@ -11,7 +11,11 @@ export async function OPTIONS(request: NextRequest) {
 
 export async function GET(request: NextRequest) {
   try {
-    // Query to fetch all published news articles, ordered by published_at descending
+    // Query to fetch all published news articles, ordered by effective date descending.
+    // Use COALESCE(published_at, created_at) so articles with a NULL published_at fall
+    // back to created_at for sorting — matching the `date` value returned below. Without
+    // this, Postgres sorts NULL published_at FIRST (NULLS FIRST is the default for DESC),
+    // pushing undated articles to the top even when their effective date is older.
     const result = await query(
       `SELECT
         id,
@@ -28,7 +32,7 @@ export async function GET(request: NextRequest) {
       WHERE type = 'news'
         AND status = 'published'
         AND deleted_at IS NULL
-      ORDER BY published_at DESC, created_at DESC`,
+      ORDER BY COALESCE(published_at, created_at) DESC`,
       []
     );
 
