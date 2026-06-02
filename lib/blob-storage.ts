@@ -107,6 +107,94 @@ export async function uploadFile(
   }
 }
 
+export interface VariantInput {
+  width: number;
+  buffer: Buffer;
+  size: number;
+}
+
+export interface VariantUploadResult {
+  url: string;
+  pathname: string;
+  width: number;
+  size: number;
+}
+
+export interface ImageSetUploadResult {
+  /** The largest variant — used as the default `url`/`src`. */
+  canonical: VariantUploadResult;
+  /** All variants, ascending by width. */
+  variants: VariantUploadResult[];
+  contentType: string;
+}
+
+/**
+ * Write a single object to Blob storage (production) or local filesystem (dev),
+ * at an explicit pathname. Shared by uploadImageSet so every responsive variant
+ * lands under the same base name. Returns the public URL and the stored pathname
+ * (leading-slash form in dev, to match uploadFile's contract).
+ */
+async function writeObject(
+  pathname: string,
+  body: Buffer,
+  contentType: string
+): Promise<{ url: string; pathname: string }> {
+  if (USE_BLOB_STORAGE) {
+    const blob = await put(pathname, body, { access: 'public', contentType });
+    return { url: blob.url, pathname: blob.pathname };
+  }
+
+  const fullPath = path.join(process.cwd(), LOCAL_UPLOAD_DIR, pathname);
+  await fs.mkdir(path.dirname(fullPath), { recursive: true });
+  await fs.writeFile(fullPath, body);
+
+  const baseUrl = process.env.PUBLIC_URL || '';
+  const url = baseUrl ? `${baseUrl}/${pathname}` : `/${pathname}`;
+  return { url, pathname: `/${pathname}` };
+}
+
+/**
+ * Upload a set of responsive image variants that share a single base name,
+ * differing only by a `-<width>w.webp` suffix. This naming lets the frontend
+ * reconstruct every variant URL from the canonical URL alone.
+ */
+export async function uploadImageSet(
+  baseFilename: string,
+  variants: VariantInput[],
+  options: { folder?: string } = {}
+): Promise<ImageSetUploadResult> {
+  const { folder = 'uploads' } = options;
+
+  // One timestamp + sanitized base for the whole set, so variants stay siblings.
+  const timestamp = Date.now();
+  const baseName = baseFilename
+    .replace(/\.[^./\\]+$/, '') // drop any extension
+    .replace(/[^a-zA-Z0-9.-]/g, '_');
+  const dir = `${folder}/${new Date().getFullYear()}/${String(
+    new Date().getMonth() + 1
+  ).padStart(2, '0')}`;
+
+  const uploaded: VariantUploadResult[] = [];
+  for (const variant of variants) {
+    const pathname = `${dir}/${timestamp}-${baseName}-${variant.width}w.webp`;
+    const written = await writeObject(pathname, variant.buffer, 'image/webp');
+    uploaded.push({
+      url: written.url,
+      pathname: written.pathname,
+      width: variant.width,
+      size: variant.size,
+    });
+  }
+
+  uploaded.sort((a, b) => a.width - b.width);
+
+  return {
+    canonical: uploaded[uploaded.length - 1],
+    variants: uploaded,
+    contentType: 'image/webp',
+  };
+}
+
 /**
  * Delete a file from Blob storage or local filesystem
  */

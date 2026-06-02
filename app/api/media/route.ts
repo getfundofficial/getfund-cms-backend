@@ -3,7 +3,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { verifyAuth } from '@/lib/auth-middleware';
 import { query } from '@/lib/db';
 import { getCorsHeaders } from '@/lib/cors';
-import { uploadFile } from '@/lib/blob-storage';
+import { uploadFile, uploadImageSet } from '@/lib/blob-storage';
+import { processImageSet } from '@/lib/image-processing';
 import { AuditLogModel } from '@/models/AuditLog';
 
 // GET /api/media - Get all media files
@@ -97,14 +98,47 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Upload file to Blob storage (or local filesystem in development)
-    const uploadResult = await uploadFile(file, file.name, {
-      contentType: file.type,
-      folder: 'uploads',
-    });
+    // Resize + compress to a set of responsive WebP variants before storing, so
+    // the public site downloads a small file sized to its slot (via <img srcset>)
+    // instead of the full-resolution original. Falls back to storing the
+    // untouched file for animated GIFs or anything sharp can't decode.
+    const originalBuffer = Buffer.from(await file.arrayBuffer());
 
-    const fileUrl = uploadResult.url;
-    const filename = uploadResult.pathname.split('/').pop() || file.name;
+    let fileUrl: string;
+    let filename: string;
+    let storedPathname: string;
+    let storedContentType: string;
+    let storedSize: number;
+
+    const processed = await processImageSet(originalBuffer, file.type);
+    if (processed) {
+      const uploaded = await uploadImageSet(file.name, processed.variants, {
+        folder: 'uploads',
+      });
+      // The canonical (largest) variant is the default src; the frontend derives
+      // the smaller variant URLs from its `-<width>w.webp` name.
+      fileUrl = uploaded.canonical.url;
+      storedPathname = uploaded.canonical.pathname;
+      storedContentType = uploaded.contentType;
+      storedSize = uploaded.canonical.size;
+      filename = uploaded.canonical.pathname.split('/').pop() || file.name;
+      console.log(
+        `[Media] Optimized ${file.name}: ${(file.size / 1024).toFixed(0)}KB ${file.type}` +
+          ` -> ${uploaded.variants.length} WebP variant(s) ` +
+          `[${uploaded.variants.map((v) => `${v.width}w:${(v.size / 1024).toFixed(0)}KB`).join(', ')}]`
+      );
+    } else {
+      // Unprocessable (e.g. animated GIF) — store the original untouched.
+      const uploadResult = await uploadFile(originalBuffer, file.name, {
+        contentType: file.type,
+        folder: 'uploads',
+      });
+      fileUrl = uploadResult.url;
+      storedPathname = uploadResult.pathname;
+      storedContentType = uploadResult.contentType;
+      storedSize = uploadResult.size;
+      filename = uploadResult.pathname.split('/').pop() || file.name;
+    }
 
     // Save to database
     const result = await query(`
@@ -122,9 +156,9 @@ export async function POST(request: NextRequest) {
     `, [
       filename,
       file.name,
-      uploadResult.contentType,
-      uploadResult.size,
-      uploadResult.pathname,
+      storedContentType,
+      storedSize,
+      storedPathname,
       fileUrl,
       altText,
       user.id
