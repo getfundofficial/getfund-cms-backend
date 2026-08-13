@@ -27,6 +27,9 @@ export async function GET(request: NextRequest) {
       FROM pages
       WHERE is_active = true
         AND show_in_menu = true
+        -- The pages table now serves more than one site (migration 053). Without
+        -- this, EFPI's pages would appear in GETFund's navigation.
+        AND site = 'getfund'
       ORDER BY menu_order ASC
       LIMIT 50
     `);
