@@ -5,6 +5,24 @@ import { corsResponse, corsOptionsResponse } from '@/lib/cors';
 import { verifyAuth, isAdminRole } from '@/lib/auth-middleware';
 import { AuditLogModel } from '@/models/AuditLog';
 
+/*
+ * The pages table serves more than one site (migration 053). Every lookup here
+ * must say which, or `about` — which both GETFund and EFPI have — matches two
+ * rows. Defaults to getfund so existing callers, which send no site, keep the
+ * behaviour they had before EFPI existed.
+ *
+ * The value is checked against this set and then interpolated, rather than
+ * passed as a parameter: these queries already juggle positional parameters and
+ * renumbering them is where mistakes live. An unrecognised value becomes
+ * 'getfund', so nothing arbitrary reaches the SQL.
+ */
+const SITES = new Set(['getfund', 'efpi']);
+const siteOf = (request: NextRequest) => {
+  const value = request.nextUrl.searchParams.get('site');
+  return value && SITES.has(value) ? value : 'getfund';
+};
+
+
 // Configure route to allow longer execution time for database wake-up
 export const maxDuration = 180; // 180 seconds (3 minutes)
 
@@ -32,6 +50,7 @@ async function tableExists(tableName: string): Promise<boolean> {
 // GET /api/pages - Get all pages (with permission filtering)
 export async function GET(request: NextRequest) {
   try {
+    const site = siteOf(request);
     const authResult = await verifyAuth(request);
 
     // Check if page_layouts table exists
@@ -64,6 +83,7 @@ export async function GET(request: NextRequest) {
             LEFT JOIN users creator ON p.created_by = creator.id
             LEFT JOIN users updater ON p.updated_by = updater.id
             LEFT JOIN page_layouts pl ON p.layout_id = pl.id
+            WHERE p.site = '${site}'
             ORDER BY p.updated_at DESC
           `);
         } else {
@@ -83,6 +103,7 @@ export async function GET(request: NextRequest) {
             FROM pages p
             LEFT JOIN users creator ON p.created_by = creator.id
             LEFT JOIN users updater ON p.updated_by = updater.id
+            WHERE p.site = '${site}'
             ORDER BY p.updated_at DESC
           `);
         }
@@ -114,7 +135,7 @@ export async function GET(request: NextRequest) {
           LEFT JOIN page_layouts pl ON p.layout_id = pl.id
           LEFT JOIN page_permissions pp ON pp.page_id = p.id
           WHERE
-            pp.user_id = $1 OR pp.role = $2
+            p.site = '${site}' AND (pp.user_id = $1 OR pp.role = $2)
           ORDER BY p.updated_at DESC
         `, [userId, userRole]);
       } else {
@@ -136,7 +157,7 @@ export async function GET(request: NextRequest) {
           LEFT JOIN users updater ON p.updated_by = updater.id
           LEFT JOIN page_permissions pp ON pp.page_id = p.id
           WHERE
-            pp.user_id = $1 OR pp.role = $2
+            p.site = '${site}' AND (pp.user_id = $1 OR pp.role = $2)
           ORDER BY p.updated_at DESC
         `, [userId, userRole]);
       }
@@ -158,6 +179,7 @@ export async function GET(request: NextRequest) {
         updated_at
       FROM pages
       WHERE is_active = true
+        AND site = '${site}'
       ORDER BY title ASC
     `);
 
@@ -179,6 +201,7 @@ export async function GET(request: NextRequest) {
 // POST /api/pages - Create new page (admin only)
 export async function POST(request: NextRequest) {
   try {
+    const site = siteOf(request);
     const authResult = await verifyAuth(request);
     if (!authResult.authenticated) {
       const errorResponse = NextResponse.json(
@@ -225,8 +248,8 @@ export async function POST(request: NextRequest) {
 
     // Check if slug already exists
     const existingPage = await query(
-      'SELECT id FROM pages WHERE slug = $1',
-      [slug]
+      'SELECT id FROM pages WHERE slug = $1 AND site = $2',
+      [slug, site]
     );
 
     if (existingPage.rows.length > 0) {
@@ -250,8 +273,9 @@ export async function POST(request: NextRequest) {
         template_variables,
         is_active,
         created_by,
-        updated_by
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+        updated_by,
+        site
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
       RETURNING *
     `, [
       slug,
@@ -264,6 +288,7 @@ export async function POST(request: NextRequest) {
       is_active,
       user.id,
       user.id,
+      site,
     ]);
 
     const newPage = result.rows[0];

@@ -34,6 +34,10 @@ export async function GET(
         p.id as page_id,
         p.slug as page_slug,
         p.title as page_title,
+        -- Not filtered by site: an admin should be able to grant permissions on
+        -- either site's pages. Returned instead, because both sites have an
+        -- About and an Impact and the list is otherwise two identical titles.
+        p.site as page_site,
         pp.id as permission_id,
         CASE WHEN pp.id IS NOT NULL THEN true ELSE false END as has_edit_permission
       FROM pages p
@@ -41,7 +45,7 @@ export async function GET(
         pp.page_id = p.id
         AND pp.user_id = $1
         AND pp.permission_type = 'edit'
-      ORDER BY p.title ASC
+      ORDER BY p.site ASC, p.title ASC
     `, [params.id]);
 
     return NextResponse.json(
