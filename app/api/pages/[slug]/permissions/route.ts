@@ -4,19 +4,6 @@ import { query } from '@/lib/db';
 import { corsResponse, corsOptionsResponse } from '@/lib/cors';
 import { verifyAuth, isAdminRole } from '@/lib/auth-middleware';
 
-/*
- * The pages table serves more than one site (migration 053), and both GETFund
- * and EFPI have an `about`, an `impact` and a `contact` — so a lookup by slug
- * alone matches two rows. Defaults to getfund, so callers that send no site
- * behave exactly as they did before EFPI existed.
- */
-const SITES = new Set(['getfund', 'efpi']);
-const siteOf = (request: NextRequest) => {
-  const value = request.nextUrl.searchParams.get('site');
-  return value && SITES.has(value) ? value : 'getfund';
-};
-
-
 // Handle CORS preflight
 export async function OPTIONS(request: NextRequest) {
   return corsOptionsResponse(request.headers.get('origin'));
@@ -54,8 +41,8 @@ export async function GET(
 
     // Get page ID
     const pageResult = await query(
-      'SELECT id FROM pages WHERE slug = $1 AND site = $2',
-      [slug, siteOf(request)]
+      'SELECT id FROM pages WHERE slug = $1',
+      [slug]
     );
 
     if (pageResult.rows.length === 0) {
@@ -130,8 +117,8 @@ export async function POST(
 
     // Get page ID
     const pageResult = await query(
-      'SELECT id FROM pages WHERE slug = $1 AND site = $2',
-      [slug, siteOf(request)]
+      'SELECT id FROM pages WHERE slug = $1',
+      [slug]
     );
 
     if (pageResult.rows.length === 0) {

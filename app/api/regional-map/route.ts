@@ -112,7 +112,7 @@ export async function PUT(request: NextRequest) {
 
     // Get impact page ID
     const pageResult = await query(
-      "SELECT id FROM pages WHERE slug = 'impact' AND site = 'getfund'"
+      "SELECT id FROM pages WHERE slug = 'impact'"
     );
 
     if (pageResult.rows.length === 0) {
@@ -215,7 +215,7 @@ export async function PATCH(request: NextRequest) {
       sectionExists = true;
     } else {
       // Get or create impact page
-      const pageResult = await query("SELECT id FROM pages WHERE slug = 'impact' AND site = 'getfund'");
+      const pageResult = await query("SELECT id FROM pages WHERE slug = 'impact'");
       if (pageResult.rows.length === 0) {
         const createPageResult = await query(`
           INSERT INTO pages (slug, title, meta_title, meta_description, is_active, created_by, updated_by)

@@ -56,8 +56,7 @@ export async function GET(request: NextRequest) {
     // Get total pages count
     const pagesResult = await query(
       `SELECT COUNT(*) as count
-       FROM pages
-       WHERE site = 'getfund'`
+       FROM pages`
     );
 
     // Get total news articles count

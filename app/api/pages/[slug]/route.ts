@@ -6,19 +6,6 @@ import { verifyAuth, isAdminRole } from '@/lib/auth-middleware';
 import { sanitizeUrls } from '@/lib/url-utils';
 import { AuditLogModel } from '@/models/AuditLog';
 
-/*
- * The pages table serves more than one site (migration 053), and both GETFund
- * and EFPI have an `about`, an `impact` and a `contact` — so a lookup by slug
- * alone matches two rows. Defaults to getfund, so callers that send no site
- * behave exactly as they did before EFPI existed.
- */
-const SITES = new Set(['getfund', 'efpi']);
-const siteOf = (request: NextRequest) => {
-  const value = request.nextUrl.searchParams.get('site');
-  return value && SITES.has(value) ? value : 'getfund';
-};
-
-
 // Handle CORS preflight
 export async function OPTIONS(request: NextRequest) {
   return corsOptionsResponse(request.headers.get('origin'));
@@ -45,8 +32,8 @@ export async function GET(
       LEFT JOIN users creator ON p.created_by = creator.id
       LEFT JOIN users updater ON p.updated_by = updater.id
       LEFT JOIN page_layouts pl ON p.layout_id = pl.id
-      WHERE p.slug = $1 AND p.site = $2
-    `, [slug, siteOf(request)]);
+      WHERE p.slug = $1
+    `, [slug]);
 
     // If not found in pages table, try content table (legacy structure)
     if (pageResult.rows.length === 0) {
@@ -205,8 +192,8 @@ export async function PUT(
 
     // Check if page exists and get current data for audit trail
     const pageResult = await query(
-      'SELECT * FROM pages WHERE slug = $1 AND site = $2',
-      [slug, siteOf(request)]
+      'SELECT * FROM pages WHERE slug = $1',
+      [slug]
     );
 
     if (pageResult.rows.length === 0) {
@@ -379,8 +366,8 @@ export async function DELETE(
 
     // Delete page (CASCADE will delete sections, permissions, revisions)
     const result = await query(
-      'DELETE FROM pages WHERE slug = $1 AND site = $2 RETURNING id, slug, title',
-      [slug, siteOf(request)]
+      'DELETE FROM pages WHERE slug = $1 RETURNING id, slug, title',
+      [slug]
     );
 
     if (result.rows.length === 0) {
