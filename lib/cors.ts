@@ -17,6 +17,12 @@ const ALLOWED_ORIGINS = [
   // Vercel production URLs - CMS Frontend
   'https://getfund-cms-frontend.vercel.app',
   'https://getfund-cms.vercel.app',
+  // EFPI website — reads its copy from /api/site-content on every page load.
+  // Without these it silently falls back to the copy bundled in its build, so
+  // the site looks perfectly fine and simply never shows an edit.
+  'https://efpi.getfund.gov.gh',
+  'https://www.efpi.getfund.gov.gh',
+  'https://efpi-website-8mxbfllu.on-forge.com',
 ];
 
 function isOriginAllowed(origin?: string | null): boolean {
