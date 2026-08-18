@@ -28,7 +28,12 @@ export async function GET(request: NextRequest) {
 
     let data;
 
-    if (all === 'true') {
+    // The EFPI site asks for its own list; the flag is set per partner in the
+    // CMS rather than inferred, because the two sites mean different things by
+    // "partner" and an organisation can be on both lists.
+    if (searchParams.get('site') === 'efpi') {
+      data = await Partner.getForEfpi();
+    } else if (all === 'true') {
       // Return all partners (for CMS admin)
       data = await Partner.getAll();
     } else if (category) {

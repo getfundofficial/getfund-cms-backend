@@ -13,6 +13,7 @@ export interface Partner {
   website_url?: string;
   description?: string;
   category?: string;
+  show_on_efpi?: boolean;
   display_order: number;
   is_active: boolean;
   created_at: Date;
@@ -25,6 +26,7 @@ export interface CreatePartnerInput {
   website_url?: string;
   description?: string;
   category?: string;
+  show_on_efpi?: boolean;
   display_order?: number;
   is_active?: boolean;
 }
@@ -35,6 +37,7 @@ export interface UpdatePartnerInput {
   website_url?: string;
   description?: string;
   category?: string;
+  show_on_efpi?: boolean;
   display_order?: number;
   is_active?: boolean;
 }
@@ -76,6 +79,22 @@ class PartnerModel {
   }
 
   /**
+   * Active partners chosen for the EFPI site.
+   *
+   * Explicitly flagged rather than inferred from category: GETFund's list is
+   * mostly scholarship universities and EFPI's is the organisations funding
+   * projects, and an organisation can be both.
+   */
+  async getForEfpi(): Promise<Partner[]> {
+    const result = await getSql()`
+      SELECT * FROM partners
+      WHERE is_active = true AND show_on_efpi = true
+      ORDER BY display_order ASC, created_at DESC
+    `;
+    return result as Partner[];
+  }
+
+  /**
    * Get a single partner by ID
    */
   async getById(id: string): Promise<Partner | null> {
@@ -92,7 +111,8 @@ class PartnerModel {
   async create(data: CreatePartnerInput): Promise<Partner> {
     const result = await getSql()`
       INSERT INTO partners (
-        name, logo_url, website_url, description, category, display_order, is_active
+        name, logo_url, website_url, description, category, display_order, is_active,
+        show_on_efpi
       )
       VALUES (
         ${data.name},
@@ -101,7 +121,8 @@ class PartnerModel {
         ${data.description || null},
         ${data.category || null},
         ${data.display_order || 0},
-        ${data.is_active !== undefined ? data.is_active : true}
+        ${data.is_active !== undefined ? data.is_active : true},
+        ${data.show_on_efpi === true}
       )
       RETURNING *
     `;
@@ -143,6 +164,10 @@ class PartnerModel {
     if (data.is_active !== undefined) {
       updates.push(`is_active = $${paramIndex++}`);
       values.push(data.is_active);
+    }
+    if (data.show_on_efpi !== undefined) {
+      updates.push(`show_on_efpi = $${paramIndex++}`);
+      values.push(data.show_on_efpi);
     }
 
     updates.push(`updated_at = CURRENT_TIMESTAMP`);
