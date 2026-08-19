@@ -81,6 +81,11 @@ export async function POST(request: NextRequest) {
       category: body.category,
       display_order: body.display_order,
       is_active: body.is_active,
+      // Listed here or it is silently dropped: this route names each field it
+      // saves, so a form can send a value, get a 200 back, and have it vanish.
+      // That is what happened to "Show on EFPI" — the checkbox worked, the
+      // partner saved, and the flag never left this function.
+      show_on_efpi: body.show_on_efpi,
     });
 
     // Log partner creation in audit trail
