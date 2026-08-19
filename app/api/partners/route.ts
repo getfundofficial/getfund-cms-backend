@@ -28,7 +28,12 @@ export async function GET(request: NextRequest) {
 
     let data;
 
-    if (all === 'true') {
+    // The EFPI site asks for its own list; the flag is set per partner in the
+    // CMS rather than inferred, because the two sites mean different things by
+    // "partner" and an organisation can be on both lists.
+    if (searchParams.get('site') === 'efpi') {
+      data = await Partner.getForEfpi();
+    } else if (all === 'true') {
       // Return all partners (for CMS admin)
       data = await Partner.getAll();
     } else if (category) {
@@ -76,6 +81,11 @@ export async function POST(request: NextRequest) {
       category: body.category,
       display_order: body.display_order,
       is_active: body.is_active,
+      // Listed here or it is silently dropped: this route names each field it
+      // saves, so a form can send a value, get a 200 back, and have it vanish.
+      // That is what happened to "Show on EFPI" — the checkbox worked, the
+      // partner saved, and the flag never left this function.
+      show_on_efpi: body.show_on_efpi,
     });
 
     // Log partner creation in audit trail
