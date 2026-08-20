@@ -1,6 +1,7 @@
 export const dynamic = "force-dynamic";
 import { NextRequest, NextResponse } from 'next/server';
 import { query } from '@/lib/db';
+import { postDonationToCrm } from '@/lib/crm';
 import crypto from 'crypto';
 
 // Verify webhook signature from Xcel payment gateway
@@ -134,6 +135,25 @@ async function handleSuccessfulPayment(data: any) {
       metadata?.campaignId || null,
       drawMonth
     ]);
+
+    /*
+     * Tell the fundraising CRM. Last, on purpose: the tables above are this
+     * site's own record and must be written whatever the CRM is doing.
+     */
+    const crm = await postDonationToCrm({
+      reference,
+      status: 'success',
+      amount,
+      currency: currency || 'GHS',
+      paidAt: new Date().toISOString(),
+      donorName: metadata?.donorName || customer.name || null,
+      donorEmail: customer.email || null,
+      donorPhone: customer.phone || null,
+      donorCategory: metadata?.donorCategory || null,
+      frequency: metadata?.donationFrequency || null,
+      providerPayload: data,
+    });
+    console.log('[webhook] crm', reference, crm);
   } catch {
     // Payment processing error
   }
@@ -141,7 +161,7 @@ async function handleSuccessfulPayment(data: any) {
 
 async function handleFailedPayment(data: any) {
   try {
-    const { reference, metadata } = data;
+    const { reference, metadata, amount, currency } = data;
 
     // Update the main donations table
     await query(`
@@ -168,6 +188,15 @@ async function handleFailedPayment(data: any) {
           updated_at = CURRENT_TIMESTAMP
       WHERE payment_reference = $1
     `, [reference]);
+
+    const crm = await postDonationToCrm({
+      reference,
+      status: 'failed',
+      amount,
+      currency: currency || 'GHS',
+      providerPayload: data,
+    });
+    console.log('[webhook] crm', reference, crm);
   } catch {
     // Failed payment handling error
   }
@@ -175,7 +204,7 @@ async function handleFailedPayment(data: any) {
 
 async function handlePendingPayment(data: any) {
   try {
-    const { reference, metadata } = data;
+    const { reference, metadata, amount, currency } = data;
 
     // Update the main donations table
     await query(`
@@ -202,6 +231,21 @@ async function handlePendingPayment(data: any) {
           updated_at = CURRENT_TIMESTAMP
       WHERE payment_reference = $1
     `, [reference]);
+
+    /*
+     * Safe to send even for a donation the CRM has already seen settle: it
+     * ignores a pending that arrives after a success or failure, because these
+     * messages can arrive in any order and "still pending" asked earlier must
+     * never un-confirm money already counted.
+     */
+    const crm = await postDonationToCrm({
+      reference,
+      status: 'pending',
+      amount,
+      currency: currency || 'GHS',
+      providerPayload: data,
+    });
+    console.log('[webhook] crm', reference, crm);
   } catch {
     // Pending payment handling error
   }

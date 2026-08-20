@@ -1,6 +1,7 @@
 export const dynamic = "force-dynamic";
 import { NextRequest, NextResponse } from 'next/server';
 import { query } from '@/lib/db';
+import { postDonationToCrm } from '@/lib/crm';
 
 const XCEL_API_URL = 'https://api.xcelapp.com';
 const XCEL_MERCHANT_ID = process.env.XCEL_MERCHANT_ID || '';
@@ -368,6 +369,33 @@ export async function POST(request: NextRequest) {
       console.error('[DEBUG] Failed to create donation record:', dbError);
       // Don't fail the payment, just log the error
     }
+
+    /*
+     * Announce the donation to the fundraising CRM while we still know who the
+     * donor is.
+     *
+     * This is the only message in a donation's life that carries their name,
+     * email and phone: Xcel's later confirmation is about the payment and says
+     * nothing about the person. Sending it here means a donor who abandons the
+     * payment page is still someone the team can see and follow up, rather than
+     * a row that never existed.
+     *
+     * Outside the try above because a CRM that is down must not be reported as
+     * a failure to create the donation record, and vice versa.
+     */
+    const crm = await postDonationToCrm({
+      reference: body.reference,
+      status: 'pending',
+      amount: body.amount,
+      currency: body.currency,
+      donorName: body.metadata?.donorName || null,
+      donorEmail: body.customerEmail || null,
+      donorPhone: body.customerPhone || null,
+      donorCategory: body.metadata?.donorCategory || 'Individual',
+      paymentMethod: body.paymentMethod,
+      frequency: body.metadata?.donationFrequency || 'one-time',
+    });
+    console.log('[DEBUG] CRM announce:', crm);
 
     return NextResponse.json({
       success: true,

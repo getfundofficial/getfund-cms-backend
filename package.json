@@ -14,7 +14,10 @@
     "sync:media:phase1": "node scripts/news-media-sync/index.js --phase 1",
     "sync:media:phase2": "node scripts/news-media-sync/index.js --phase 2",
     "sync:media:phase3": "node scripts/news-media-sync/index.js --phase 3",
-    "sync:media:phase4": "node scripts/news-media-sync/index.js --phase 4"
+    "sync:media:phase4": "node scripts/news-media-sync/index.js --phase 4",
+    "reconcile": "node scripts/reconcile-donations.js",
+    "reconcile:dry": "node scripts/reconcile-donations.js --all --dry-run",
+    "reconcile:all": "node scripts/reconcile-donations.js --all"
   },
   "keywords": [
     "cms",
